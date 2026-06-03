@@ -1,0 +1,161 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Poppins',sans-serif;
+}
+
+body{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+
+    background:
+    linear-gradient(
+        135deg,
+        #fff0f5,
+        #ffe4ec,
+        #fff7fa
+    );
+
+    overflow:hidden;
+    position:relative;
+}
+
+/* floating blobs */
+
+body::before{
+    content:"";
+    position:absolute;
+    width:350px;
+    height:350px;
+    background:#ffc0cb;
+    border-radius:50%;
+    top:-100px;
+    left:-100px;
+    opacity:.3;
+    filter:blur(80px);
+}
+
+body::after{
+    content:"";
+    position:absolute;
+    width:350px;
+    height:350px;
+    background:#ffb6c1;
+    border-radius:50%;
+    right:-100px;
+    bottom:-100px;
+    opacity:.3;
+    filter:blur(80px);
+}
+
+/* CARD */
+
+.auth-card{
+    width:430px;
+
+    background:
+    rgba(255,255,255,.35);
+
+    backdrop-filter:blur(20px);
+
+    border-radius:35px;
+
+    padding:45px;
+
+    box-shadow:
+    0 20px 40px rgba(0,0,0,.08);
+
+    animation:pop .8s ease;
+}
+
+@keyframes pop{
+    from{
+        opacity:0;
+        transform:
+        scale(.8);
+    }
+
+    to{
+        opacity:1;
+        transform:
+        scale(1);
+    }
+}
+
+.auth-card h1{
+    text-align:center;
+    margin-bottom:30px;
+    color:#ff4f81;
+}
+
+/* INPUT */
+
+.input-group{
+    margin-bottom:20px;
+}
+
+.input-group input{
+    width:100%;
+    padding:18px;
+    border:none;
+    border-radius:18px;
+    outline:none;
+
+    background:white;
+    transition:.3s;
+}
+
+.input-group input:focus{
+    transform:scale(1.02);
+
+    box-shadow:
+    0 0 0 4px
+    rgba(255,105,180,.15);
+}
+
+/* BUTTON */
+
+button{
+    width:100%;
+    padding:18px;
+    border:none;
+    border-radius:50px;
+
+    background:
+    linear-gradient(
+        135deg,
+        #ff69b4,
+        #ff8fab
+    );
+
+    color:white;
+    font-size:17px;
+    cursor:pointer;
+    transition:.4s;
+}
+
+button:hover{
+    transform:
+    translateY(-4px)
+    scale(1.02);
+}
+
+/* LINKS */
+
+.extra{
+    text-align:center;
+    margin-top:20px;
+}
+
+.extra a{
+    text-decoration:none;
+    color:#ff4f81;
+    font-weight:600;
+}
+
+.extra a:hover{
+    text-decoration:underline;
+}

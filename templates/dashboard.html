@@ -1,0 +1,131 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>SafeHer Dashboard</title>
+
+    <link rel="stylesheet"
+    href="{% static 'css/dashboard.css' %}">
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="top-section">
+
+        <h1>
+            Welcome to SafeHer 💖
+        </h1>
+
+        <p>
+            Stay protected and connected.
+        </p>
+
+    </div>
+
+    <div class="grid">
+
+        <div class="feature-card danger">
+            <h2>🚨 SOS</h2>
+
+            <p>
+                Trigger emergency alert
+            </p>
+
+            <a href="/dashboard/sos/">
+                Open
+            </a>
+        </div>
+
+
+        <div class="feature-card">
+            <h2>📞 Emergency Contacts</h2>
+
+            <p>
+                Manage trusted people
+            </p>
+
+            <a href="/dashboard/contacts/">
+                Open
+            </a>
+        </div>
+
+
+        <div class="feature-card">
+            <h2>🚖 Start Journey</h2>
+
+            <p>
+                Begin safe travel tracking
+            </p>
+
+            <a href="#">
+                Open
+            </a>
+        </div>
+
+
+        <div class="feature-card">
+            <h2>📍 Nearby Safe Places</h2>
+
+            <p>
+                Hospitals & police stations
+            </p>
+
+            <a href="#">
+                Open
+            </a>
+        </div>
+
+
+        <div class="feature-card">
+            <h2>⚠️ Report Unsafe Area</h2>
+
+            <p>
+                Help others stay safe
+            </p>
+
+            <a href="#">
+                Open
+            </a>
+        </div>
+
+
+        <div class="feature-card">
+            <h2>🧭 Journey History</h2>
+
+            <p>
+                View previous trips
+            </p>
+
+            <a href="#">
+                Open
+            </a>
+        </div>
+
+    </div>
+
+
+    <div class="quick-section">
+
+        <h2>
+            Trusted Contacts
+        </h2>
+
+        <div class="contact-box">
+            Mom — 9876543210
+        </div>
+
+        <div class="contact-box">
+            Best Friend — 9876543210
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>
