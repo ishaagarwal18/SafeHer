@@ -3,41 +3,61 @@
 <!DOCTYPE html>
 <html>
 <head>
-
-    <title>Emergency Contacts</title>
-
-    <link rel="stylesheet"
-    href="{% static 'css/dashboard.css' %}">
-
+<title>Contacts</title>
+<link rel="stylesheet" href="{% static 'css/features.css' %}">
 </head>
 
 <body>
 
-<div class="page">
+<div class="container">
 
-    <h1>
-        Emergency Contacts
-    </h1>
+<h1 class="page-title">
+📞 Trusted Contacts
+</h1>
 
-    <div class="contact-card">
+<div class="card">
 
-        <form>
+<form>
 
-            <input
-            type="text"
-            placeholder="Contact Name">
+<input type="text" placeholder="Contact Name">
 
-            <input
-            type="text"
-            placeholder="Phone Number">
+<input type="text" placeholder="Phone Number">
 
-            <button>
-                Add Contact
-            </button>
+<button class="btn">
+Add Contact
+</button>
 
-        </form>
+</form>
 
-    </div>
+</div>
+
+<div class="card">
+
+<h2>Saved Contacts</h2>
+
+<table>
+
+<tr>
+<th>Name</th>
+<th>Phone</th>
+<th>Action</th>
+</tr>
+
+<tr>
+<td>Mom</td>
+<td>9876543210</td>
+<td>Edit</td>
+</tr>
+
+<tr>
+<td>Friend</td>
+<td>9999999999</td>
+<td>Edit</td>
+</tr>
+
+</table>
+
+</div>
 
 </div>
 

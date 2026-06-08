@@ -1,0 +1,50 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Report</title>
+<link rel="stylesheet" href="{% static 'css/features.css' %}">
+</head>
+
+<body>
+
+<div class="container">
+
+<h1 class="page-title">
+⚠️ Report Unsafe Area
+</h1>
+
+<div class="card">
+
+<form>
+
+<input type="text"
+placeholder="Area Name">
+
+<select>
+
+<option>Poor Lighting</option>
+
+<option>Harassment</option>
+
+<option>Suspicious Activity</option>
+
+</select>
+
+<textarea
+placeholder="Describe issue">
+</textarea>
+
+<button class="btn">
+Submit Report
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+</body>
+</html>

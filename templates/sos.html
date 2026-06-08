@@ -3,37 +3,63 @@
 <!DOCTYPE html>
 <html>
 <head>
-
-    <title>SOS</title>
-
-    <link rel="stylesheet"
-    href="{% static 'css/dashboard.css' %}">
-
+<title>SOS</title>
+<link rel="stylesheet" href="{% static 'css/features.css' %}">
 </head>
 
 <body>
 
-<div class="page">
+<div class="container">
 
-    <h1>
-        Emergency SOS
-    </h1>
+<h1 class="page-title">
+🚨 Emergency SOS
+</h1>
 
-    <div class="sos-card">
+<div class="card">
 
-        <h2>
-            Need Help?
-        </h2>
+<h2>Need Immediate Help?</h2>
 
-        <button class="sos-btn">
-            EMERGENCY SOS
-        </button>
+<p>
+Press the button below to notify trusted contacts.
+</p>
 
-        <p>
-            Sends alert to trusted contacts
-        </p>
+<br>
 
-    </div>
+<button class="btn">
+SEND SOS ALERT
+</button>
+
+</div>
+
+<div class="card">
+
+<h2>Emergency Numbers</h2>
+
+<table>
+
+<tr>
+<th>Service</th>
+<th>Number</th>
+</tr>
+
+<tr>
+<td>Police</td>
+<td>100</td>
+</tr>
+
+<tr>
+<td>Women Helpline</td>
+<td>1091</td>
+</tr>
+
+<tr>
+<td>Ambulance</td>
+<td>108</td>
+</tr>
+
+</table>
+
+</div>
 
 </div>
 
