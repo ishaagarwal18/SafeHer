@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from .models import UserProfile
-
+from .models import EmergencyContact, UserProfile
 
 def home(request):
     return render(request, 'index.html')
@@ -71,3 +71,24 @@ def login_page(request):
         )
 
     return render(request, "login.html")
+
+
+
+def contacts_page(request):
+
+    if request.method == "POST":
+
+        EmergencyContact.objects.create(
+            user=UserProfile.objects.first(),
+            contact_name=request.POST["name"],
+            phone_number=request.POST["phone"],
+            relationship=request.POST["relationship"]
+        )
+
+    contacts = EmergencyContact.objects.all()
+
+    return render(
+        request,
+        "contacts.html",
+        {"contacts": contacts}
+    )

@@ -16,12 +16,21 @@
 </h1>
 
 <div class="card">
+<form method="POST">
 
-<form>
+{% csrf_token %}
 
-<input type="text" placeholder="Contact Name">
+<input type="text"
+name="name"
+placeholder="Contact Name">
 
-<input type="text" placeholder="Phone Number">
+<input type="text"
+name="phone"
+placeholder="Phone Number">
+
+<input type="text"
+name="relationship"
+placeholder="Relationship">
 
 <button class="btn">
 Add Contact
@@ -34,26 +43,23 @@ Add Contact
 <div class="card">
 
 <h2>Saved Contacts</h2>
-
 <table>
 
 <tr>
 <th>Name</th>
 <th>Phone</th>
-<th>Action</th>
+<th>Relationship</th>
 </tr>
 
-<tr>
-<td>Mom</td>
-<td>9876543210</td>
-<td>Edit</td>
-</tr>
+{% for contact in contacts %}
 
 <tr>
-<td>Friend</td>
-<td>9999999999</td>
-<td>Edit</td>
+<td>{{ contact.contact_name }}</td>
+<td>{{ contact.phone_number }}</td>
+<td>{{ contact.relationship }}</td>
 </tr>
+
+{% endfor %}
 
 </table>
 
