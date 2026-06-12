@@ -16,24 +16,20 @@
 </h1>
 
 <div class="card">
+<form method="POST">
 
-<form>
+{% csrf_token %}
 
 <input type="text"
+name="area"
 placeholder="Area Name">
 
-<select>
-
-<option>Poor Lighting</option>
-
-<option>Harassment</option>
-
-<option>Suspicious Activity</option>
-
-</select>
+<input type="text"
+name="issue"
+placeholder="Issue Type">
 
 <textarea
-placeholder="Describe issue">
+name="description">
 </textarea>
 
 <button class="btn">
@@ -42,6 +38,25 @@ Submit Report
 
 </form>
 
+<table>
+
+<tr>
+<th>Area</th>
+<th>Issue</th>
+<th>Description</th>
+</tr>
+
+{% for r in reports %}
+
+<tr>
+<td>{{ r.area_name }}</td>
+<td>{{ r.issue_type }}</td>
+<td>{{ r.description }}</td>
+</tr>
+
+{% endfor %}
+
+</table>
 </div>
 
 </div>

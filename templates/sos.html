@@ -24,41 +24,39 @@ Press the button below to notify trusted contacts.
 </p>
 
 <br>
+<form method="POST">
+
+{% csrf_token %}
 
 <button class="btn">
 SEND SOS ALERT
 </button>
 
+</form>
 </div>
 
 <div class="card">
 
 <h2>Emergency Numbers</h2>
-
 <table>
 
 <tr>
-<th>Service</th>
-<th>Number</th>
+<th>Time</th>
+<th>Status</th>
+<th>Location</th>
 </tr>
 
-<tr>
-<td>Police</td>
-<td>100</td>
-</tr>
+{% for alert in alerts %}
 
 <tr>
-<td>Women Helpline</td>
-<td>1091</td>
+<td>{{ alert.alert_time }}</td>
+<td>{{ alert.status }}</td>
+<td>{{ alert.location }}</td>
 </tr>
 
-<tr>
-<td>Ambulance</td>
-<td>108</td>
-</tr>
+{% endfor %}
 
 </table>
-
 </div>
 
 </div>

@@ -1,11 +1,25 @@
 from django.shortcuts import render
+from .models import SOSAlert
 
 
 def dashboard_page(request):
     return render(request,'dashboard.html')
 
 def sos_page(request):
-    return render(request,'sos.html')
+
+    if request.method == "POST":
+
+        SOSAlert.objects.create(
+            location="Ahmedabad"
+        )
+
+    alerts = SOSAlert.objects.all()
+
+    return render(
+        request,
+        "sos.html",
+        {"alerts": alerts}
+    )
 
 def contacts_page(request):
     return render(request,'contacts.html')

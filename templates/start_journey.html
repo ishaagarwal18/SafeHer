@@ -16,17 +16,24 @@
 </h1>
 
 <div class="card">
+<form method="POST">
 
-<form>
+{% csrf_token %}
 
-<input type="text" placeholder="Starting Point">
+<input type="text"
+name="source"
+placeholder="Source">
 
-<input type="text" placeholder="Destination">
+<input type="text"
+name="destination"
+placeholder="Destination">
 
-<select>
+<select name="transport">
+
 <option>Car</option>
 <option>Bus</option>
 <option>Train</option>
+
 </select>
 
 <button class="btn">
@@ -34,6 +41,28 @@ Start Journey
 </button>
 
 </form>
+
+<table>
+
+<tr>
+<th>Source</th>
+<th>Destination</th>
+<th>Transport</th>
+<th>Status</th>
+</tr>
+
+{% for j in journeys %}
+
+<tr>
+<td>{{ j.source }}</td>
+<td>{{ j.destination }}</td>
+<td>{{ j.transport_mode }}</td>
+<td>{{ j.status }}</td>
+</tr>
+
+{% endfor %}
+
+</table>
 
 </div>
 
