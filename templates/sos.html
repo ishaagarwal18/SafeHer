@@ -1,4 +1,4 @@
-{% load static %}
+<!-- {% load static %}
 
 <!DOCTYPE html>
 <html>
@@ -27,6 +27,103 @@ Press the button below to notify trusted contacts.
 <form method="POST">
 
 {% csrf_token %}
+
+<button class="btn">
+SEND SOS ALERT
+</button>
+
+</form>
+</div>
+
+<div class="card">
+
+<h2>Emergency Numbers</h2>
+<table>
+
+<tr>
+<th>Time</th>
+<th>Status</th>
+<th>Location</th>
+</tr>
+
+{% for alert in alerts %}
+
+<tr>
+<td>{{ alert.alert_time }}</td>
+<td>{{ alert.status }}</td>
+<td>{{ alert.location }}</td>
+</tr>
+
+{% endfor %}
+
+</table>
+</div>
+
+</div>
+
+</body>
+</html> -->
+
+
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>SOS</title>
+<link rel="stylesheet" href="{% static 'css/features.css' %}">
+</head>
+<script>
+
+if(navigator.geolocation){
+
+navigator.geolocation.getCurrentPosition(function(position){
+
+let lat = position.coords.latitude;
+let lon = position.coords.longitude;
+
+document.getElementById("latitude").value = lat;
+document.getElementById("longitude").value = lon;
+
+fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`)
+
+.then(response=>response.json())
+
+.then(data=>{
+
+document.getElementById("location").value=data.display_name;
+
+});
+
+});
+
+}
+
+</script>
+<body>
+
+<div class="container">
+
+<h1 class="page-title">
+🚨 Emergency SOS
+</h1>
+
+<div class="card">
+
+<h2>Need Immediate Help?</h2>
+
+<p>
+Press the button below to notify trusted contacts.
+</p>
+
+<br>
+<form method="POST" id="sosForm">
+
+{% csrf_token %}
+
+<input type="hidden" name="latitude" id="latitude">
+<input type="hidden" name="longitude" id="longitude">
+<input type="hidden" name="location" id="location">
 
 <button class="btn">
 SEND SOS ALERT
