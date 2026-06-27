@@ -22,15 +22,19 @@
 
 <input type="text"
 name="area"
-placeholder="Area Name">
+placeholder="Area Name"
+required>
 
 <input type="text"
 name="issue"
-placeholder="Issue Type">
+placeholder="Issue Type (e.g. Harassment, Poor Lighting)"
+required>
 
 <textarea
-name="description">
-</textarea>
+name="description"
+placeholder="Describe the issue..."
+rows="4"
+required></textarea>
 
 <button class="btn">
 Submit Report
@@ -54,16 +58,21 @@ Submit Report
 <td>{{ r.description }}</td>
 </tr>
 
+{% empty %}
+<tr>
+<td colspan="3" style="text-align:center;">No reports yet.</td>
+</tr>
 {% endfor %}
 
 </table>
 </div>
 
 </div>
-<div class="nav-links">
+<div class="nav-links" style="text-align: center; margin: 20px 0;">
     <a href="/dashboard/" class="btn">
-        Back to Dashboard
+        ← Back to Dashboard
     </a>
 </div>
+
 </body>
 </html>
