@@ -1,0 +1,237 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Email Verification | SafeHer</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'css/auth.css' %}">
+
+    <style>
+
+        body{
+
+            margin:0;
+            font-family:'Poppins',sans-serif;
+
+            background:linear-gradient(135deg,#ffdce8,#fff5f8);
+
+            display:flex;
+
+            justify-content:center;
+
+            align-items:center;
+
+            height:100vh;
+
+        }
+
+        .verify-card{
+
+            width:420px;
+
+            background:white;
+
+            padding:40px;
+
+            border-radius:25px;
+
+            box-shadow:0 20px 40px rgba(0,0,0,.12);
+
+            text-align:center;
+
+            animation:fade .8s;
+
+        }
+
+        .verify-card h1{
+
+            color:#ff4f81;
+
+            margin-bottom:10px;
+
+        }
+
+        .verify-card p{
+
+            color:#666;
+
+            margin-bottom:25px;
+
+        }
+
+        input{
+
+            width:100%;
+
+            padding:15px;
+
+            border-radius:12px;
+
+            border:1px solid #ddd;
+
+            margin-bottom:20px;
+
+            font-size:16px;
+
+            box-sizing:border-box;
+
+        }
+
+        button{
+
+            width:100%;
+
+            padding:15px;
+
+            border:none;
+
+            border-radius:12px;
+
+            background:#ff4f81;
+
+            color:white;
+
+            font-size:16px;
+
+            cursor:pointer;
+
+            transition:.3s;
+
+        }
+
+        button:hover{
+
+            background:#ff2d6f;
+
+            transform:translateY(-2px);
+
+        }
+
+        .error{
+
+            margin-top:15px;
+
+            color:red;
+
+            font-size:14px;
+
+        }
+
+        .resend{
+
+            margin-top:20px;
+
+        }
+
+        .resend a{
+
+            color:#ff4f81;
+
+            text-decoration:none;
+
+            font-weight:600;
+
+        }
+
+        @keyframes fade{
+
+            from{
+
+                opacity:0;
+
+                transform:translateY(30px);
+
+            }
+
+            to{
+
+                opacity:1;
+
+                transform:translateY(0);
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="verify-card">
+
+    <h1>📧 Verify Your Email</h1>
+
+    <p>
+
+        We've sent a 6-digit OTP to
+
+        <br>
+
+        <b>{{ email }}</b>
+
+    </p>
+
+    <form method="POST" action="{% url 'verify_email' %}">
+
+        {% csrf_token %}
+
+        <input
+            type="hidden"
+            name="email"
+            value="{{ email }}">
+
+        <input
+            type="text"
+            name="otp"
+            maxlength="6"
+            placeholder="Enter OTP"
+            required>
+
+        <button type="submit">
+
+            Verify OTP
+
+        </button>
+
+    </form>
+
+    {% if error %}
+
+        <p class="error">
+
+            {{ error }}
+
+        </p>
+
+    {% endif %}
+
+    <div class="resend">
+
+        Didn't receive the OTP?
+
+        <br>
+
+        <a href="#">
+
+            Resend OTP
+
+        </a>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>
