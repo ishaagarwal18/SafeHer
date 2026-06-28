@@ -133,6 +133,6 @@ EMAIL_USE_TLS=True
 
 EMAIL_HOST_USER='ishaagarwal4688@gmail.com'
 
-EMAIL_HOST_PASSWORD='sqqjajdoqmgyahor'
+EMAIL_HOST_PASSWORD='bdfqxqfwxknxhfha'
 
 DEFAULT_FROM_EMAIL=EMAIL_HOST_USER

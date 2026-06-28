@@ -15,26 +15,38 @@
 📞 Trusted Contacts
 </h1>
 
+<!-- Add Contact Form -->
 <div class="card">
-<form method="POST">
+<form method="POST" action="/dashboard/contacts/">
 
-{% csrf_token %}
+    {% csrf_token %}
 
-<input type="text"
-name="name"
-placeholder="Contact Name">
+    <input
+        type="text"
+        name="name"
+        placeholder="Contact Name"
+        required>
 
-<input type="text"
-name="phone"
-placeholder="Phone Number">
+    <input
+        type="tel"
+        name="phone"
+        placeholder="Phone Number"
+        pattern="[6789][0-9]{9}"
+        maxlength="10"
+        inputmode="numeric"
+        oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)"
+        title="Phone number must start with 6, 7, 8, or 9 and contain exactly 10 digits."
+        required>
 
-<input type="text"
-name="relationship"
-placeholder="Relationship">
+    <input
+        type="text"
+        name="relationship"
+        placeholder="Relationship"
+        required>
 
-<button class="btn">
-Add Contact
-</button>
+    <button type="submit" class="btn">
+        Add Contact
+    </button>
 
 </form>
 
@@ -43,20 +55,31 @@ Add Contact
 <div class="card">
 
 <h2>Saved Contacts</h2>
+
 <table>
 
 <tr>
-<th>Name</th>
-<th>Phone</th>
-<th>Relationship</th>
+    <th>Name</th>
+    <th>Phone</th>
+    <th>Relationship</th>
+    <th>Action</th>
 </tr>
 
 {% for contact in contacts %}
 
 <tr>
-<td>{{ contact.contact_name }}</td>
-<td>{{ contact.phone_number }}</td>
-<td>{{ contact.relationship }}</td>
+    <td>{{ contact.contact_name }}</td>
+    <td>{{ contact.phone_number }}</td>
+    <td>{{ contact.relationship }}</td>
+    <td>
+        <form method="POST" action="/dashboard/add_trusted_contact/">
+            {% csrf_token %}
+            <input type="hidden" name="contact_id" value="{{ contact.id }}">
+            <button type="submit" class="btn">
+                Add to Trusted Contacts
+            </button>
+        </form>
+    </td>
 </tr>
 
 {% endfor %}
@@ -66,7 +89,8 @@ Add Contact
 </div>
 
 </div>
-<div class="nav-links" style="text-align: center; margin: 20px 0;">
+
+<div class="nav-links" style="text-align:center; margin:20px 0;">
     <a href="/dashboard/" class="btn">
         ← Back to Dashboard
     </a>

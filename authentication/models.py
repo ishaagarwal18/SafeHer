@@ -21,9 +21,10 @@ class EmailOTP(models.Model):
         return self.email
 
 class EmergencyContact(models.Model):
-    user = models.ForeignKey(UserProfile,on_delete=models.CASCADE)
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     contact_name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=15)
     relationship = models.CharField(max_length=50)
+    is_trusted = models.BooleanField(default=False)
     def __str__(self):
         return self.contact_name
