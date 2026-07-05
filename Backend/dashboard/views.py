@@ -1,8 +1,8 @@
 from django.shortcuts import render, redirect,get_object_or_404
 from .models import SOSAlert
-from Backend.journey.models import Journey
-from Backend.authentication.models import EmergencyContact, UserProfile
-from Backend.reports.models import UnsafeReport
+from journey.models import Journey
+from authentication.models import EmergencyContact, UserProfile
+from reports.models import UnsafeReport
 from urllib.parse import quote
 
 

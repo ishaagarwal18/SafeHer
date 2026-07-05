@@ -1,4 +1,7 @@
 from django.shortcuts import render, redirect
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
 from .models import UserProfile
 from .models import EmergencyContact, UserProfile
 import random
@@ -6,6 +9,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from .models import EmailOTP
 from django.contrib.auth.hashers import make_password, check_password
+from .serializers import UserProfileSerializer
 
 def home(request):
     return render(request, 'index.html')
@@ -190,3 +194,36 @@ def verify_email(request):
                 }
             )
     return redirect("signup")
+
+
+@api_view(["POST"])
+
+def signup_api(request):
+
+    serializer = UserProfileSerializer(
+        data=request.data
+    )
+
+    if serializer.is_valid():
+
+        serializer.save()
+
+        return Response(
+
+            {
+
+                "message":"Signup Successful"
+
+            },
+
+            status=status.HTTP_201_CREATED
+
+        )
+
+    return Response(
+
+        serializer.errors,
+
+        status=status.HTTP_400_BAD_REQUEST
+
+    )

@@ -7,4 +7,5 @@ urlpatterns = [
     path('signup/', views.signup_page, name='signup'),
     path("send-otp/",views.send_email_otp,name="send_otp"),
     path("verify-email/",views.verify_email,name="verify_email"),
+    path("api/signup/",views.signup_api,name="signup_api"),
 ]
