@@ -11,12 +11,18 @@
   },
   "dependencies": {
     "axios": "^1.18.1",
+<<<<<<< HEAD
     "framer-motion": "^12.42.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-icons": "^5.7.0",
     "react-router-dom": "^7.18.1",
     "react-toastify": "^11.1.0"
+=======
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.1"
+>>>>>>> 638ded2b3cfbe47f6a9e7fe38770d4a478977c07
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
