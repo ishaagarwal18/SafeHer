@@ -1,11 +1,12 @@
 import { Link } from "react-router-dom";
 import "../styles/features.css";
 
-function SafePlaces() {
+function JourneyHistory() {
 
-    // Later from Django API
+    // Temporary Data
+    // Will come from Django
 
-    const places = [];
+    const journeys = [];
 
     return (
 
@@ -15,7 +16,7 @@ function SafePlaces() {
 
                 <h1 className="page-title">
 
-                    📍 Nearby Safe Places
+                    🧭 Journey History
 
                 </h1>
 
@@ -27,11 +28,15 @@ function SafePlaces() {
 
                             <tr>
 
-                                <th>Name</th>
+                                <th>Source</th>
 
-                                <th>Category</th>
+                                <th>Destination</th>
 
-                                <th>Address</th>
+                                <th>Transport</th>
+
+                                <th>Status</th>
+
+                                <th>Started</th>
 
                             </tr>
 
@@ -41,17 +46,21 @@ function SafePlaces() {
 
                             {
 
-                                places.length>0 ?
+                                journeys.length > 0 ?
 
-                                places.map((place,index)=>(
+                                journeys.map((journey,index)=>(
 
                                     <tr key={index}>
 
-                                        <td>{place.name}</td>
+                                        <td>{journey.source}</td>
 
-                                        <td>{place.category}</td>
+                                        <td>{journey.destination}</td>
 
-                                        <td>{place.address}</td>
+                                        <td>{journey.transport_mode}</td>
+
+                                        <td>{journey.status}</td>
+
+                                        <td>{journey.start_time}</td>
 
                                     </tr>
 
@@ -62,11 +71,11 @@ function SafePlaces() {
                                 <tr>
 
                                     <td
-                                        colSpan="3"
+                                        colSpan="5"
                                         style={{textAlign:"center"}}
                                     >
 
-                                        No Safe Places Found
+                                        No Journey History
 
                                     </td>
 
@@ -101,4 +110,4 @@ function SafePlaces() {
 
 }
 
-export default SafePlaces;
+export default JourneyHistory;

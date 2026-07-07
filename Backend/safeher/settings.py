@@ -40,12 +40,8 @@ INSTALLED_APPS = [
     'dashboard',
     'journey',
     'reports',
-<<<<<<< HEAD
     "rest_framework",
     'corsheaders',
-=======
-    "rest_framework"
->>>>>>> 638ded2b3cfbe47f6a9e7fe38770d4a478977c07
 ]
 
 MIDDLEWARE = [
@@ -56,11 +52,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-<<<<<<< HEAD
     "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
-=======
->>>>>>> 638ded2b3cfbe47f6a9e7fe38770d4a478977c07
 ]
 
 ROOT_URLCONF = 'safeher.urls'
@@ -146,7 +139,6 @@ EMAIL_HOST_USER='ishaagarwal4688@gmail.com'
 
 EMAIL_HOST_PASSWORD='bdfqxqfwxknxhfha'
 
-<<<<<<< HEAD
 DEFAULT_FROM_EMAIL=EMAIL_HOST_USER
 
 CORS_ALLOWED_ORIGINS = ["http://localhost:5173",]
@@ -159,6 +151,4 @@ REST_FRAMEWORK={
         'rest_framework.permissions.AllowAny',
     )
 }
-=======
 DEFAULT_FROM_EMAIL=EMAIL_HOST_USER
->>>>>>> 638ded2b3cfbe47f6a9e7fe38770d4a478977c07

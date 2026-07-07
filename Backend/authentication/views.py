@@ -1,10 +1,7 @@
 from django.shortcuts import render, redirect
-<<<<<<< HEAD
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-=======
->>>>>>> 638ded2b3cfbe47f6a9e7fe38770d4a478977c07
 from .models import UserProfile
 from .models import EmergencyContact, UserProfile
 import random
@@ -12,10 +9,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from .models import EmailOTP
 from django.contrib.auth.hashers import make_password, check_password
-<<<<<<< HEAD
 from .serializers import UserProfileSerializer
-=======
->>>>>>> 638ded2b3cfbe47f6a9e7fe38770d4a478977c07
 
 def home(request):
     return render(request, 'index.html')
@@ -199,7 +193,6 @@ def verify_email(request):
                     "error": "OTP not found"
                 }
             )
-<<<<<<< HEAD
     return redirect("signup")
 
 
@@ -234,6 +227,4 @@ def signup_api(request):
         status=status.HTTP_400_BAD_REQUEST
 
     )
-=======
     return redirect("signup")
->>>>>>> 638ded2b3cfbe47f6a9e7fe38770d4a478977c07
