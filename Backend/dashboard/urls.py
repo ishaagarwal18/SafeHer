@@ -11,4 +11,6 @@ urlpatterns = [
     path('reports/', reports_page),
     path('history/', history_page),
     path('add_trusted_contact/', add_trusted_contact, name='add_trusted_contact'),
+    # path("dashboard/",dashboard_data,name="dashboard-api"),
+    
 ]

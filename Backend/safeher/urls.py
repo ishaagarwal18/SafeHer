@@ -7,4 +7,5 @@ urlpatterns = [
     path('',include('authentication.urls')),
     # dashboard app
     path('dashboard/',include('dashboard.urls')),
+    path("api/", include("dashboard.urls")),
 ]
