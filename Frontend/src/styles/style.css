@@ -1,0 +1,285 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', 'Outfit', sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #fff0f5 0%, #ffe4ec 50%, #fff7fa 100%);
+    overflow-x: hidden;
+    min-height: 100vh;
+    position: relative;
+}
+
+/* Floating background glowing ambient blobs */
+body::before {
+    content: "";
+    position: absolute;
+    width: 450px;
+    height: 450px;
+    background: radial-gradient(circle, rgba(255, 182, 193, 0.4) 0%, rgba(255, 105, 180, 0.1) 70%);
+    border-radius: 50%;
+    top: -120px;
+    left: -120px;
+    filter: blur(80px);
+    animation: float1 8s infinite alternate ease-in-out;
+    pointer-events: none;
+}
+
+body::after {
+    content: "";
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(255, 192, 203, 0.4) 0%, rgba(255, 79, 129, 0.15) 70%);
+    border-radius: 50%;
+    right: -100px;
+    bottom: -100px;
+    filter: blur(80px);
+    animation: float2 8s infinite alternate ease-in-out;
+    pointer-events: none;
+}
+
+@keyframes float1 {
+    from { transform: translateY(0) scale(1); }
+    to { transform: translateY(40px) scale(1.05); }
+}
+
+@keyframes float2 {
+    from { transform: translateY(0) scale(1); }
+    to { transform: translateY(-40px) scale(1.05); }
+}
+
+/* NAVBAR */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 25px 80px;
+    position: relative;
+    z-index: 10;
+}
+
+.logo {
+    font-size: 36px;
+    font-weight: 700;
+    color: #ff4f81;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-shadow: 0 4px 15px rgba(255, 79, 129, 0.2);
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #555;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    position: relative;
+    padding: 6px 0;
+}
+
+.nav-links a::after {
+    content: "";
+    position: absolute;
+    width: 0%;
+    height: 3px;
+    left: 0;
+    bottom: -2px;
+    background: #ff69b4;
+    border-radius: 20px;
+    transition: width 0.4s ease;
+}
+
+.nav-links a:hover::after {
+    width: 100%;
+}
+
+.nav-links a:hover {
+    color: #ff4f81;
+}
+
+/* button */
+.signup-btn {
+    background: linear-gradient(135deg, #ff69b4, #ff8fab);
+    color: white !important;
+    padding: 12px 26px !important;
+    border-radius: 40px;
+    transition: all 0.4s ease !important;
+    box-shadow: 0 8px 20px rgba(255, 105, 180, 0.35);
+}
+
+.signup-btn::after {
+    display: none !important;
+}
+
+.signup-btn:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 12px 25px rgba(255, 105, 180, 0.45);
+}
+
+/* HERO */
+.hero {
+    min-height: 82vh;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 80px;
+    position: relative;
+    z-index: 10;
+}
+
+.hero-text {
+    width: 50%;
+    animation: fadeLeft 1s ease;
+}
+
+@keyframes fadeLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.hero-text h1 {
+    font-size: 64px;
+    color: #222;
+    line-height: 1.15;
+    font-weight: 700;
+}
+
+.hero-text span {
+    color: #ff4f81;
+    background: linear-gradient(135deg, #ff4f81, #ff69b4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-text p {
+    margin: 25px 0 35px;
+    font-size: 19px;
+    color: #666;
+    line-height: 1.8;
+}
+
+.btn {
+    display: inline-block;
+    text-decoration: none;
+    background: linear-gradient(135deg, #ff69b4, #ff8fab);
+    color: white;
+    padding: 16px 34px;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 10px 25px rgba(255, 105, 180, 0.3);
+    transition: all 0.4s ease;
+}
+
+.btn:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 15px 30px rgba(255, 105, 180, 0.45);
+}
+
+/* Glass card */
+.hero-card {
+    width: 440px;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 30px;
+    padding: 35px;
+    box-shadow: 0 20px 40px rgba(255, 105, 180, 0.12);
+    animation: fadeRight 1s ease;
+}
+
+@keyframes fadeRight {
+    from {
+        opacity: 0;
+        transform: translateX(50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.card-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: #ff4f81;
+    margin-bottom: 25px;
+}
+
+.feature {
+    background: white;
+    border-radius: 20px;
+    padding: 22px;
+    margin-bottom: 18px;
+    transition: all 0.4s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(255, 200, 220, 0.3);
+}
+
+.feature::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 100%;
+    background: rgba(255, 182, 193, 0.25);
+    transition: width 0.4s ease;
+}
+
+.feature:hover::before {
+    width: 100%;
+}
+
+.feature:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 10px 25px rgba(255, 79, 129, 0.15);
+}
+
+.feature h3 {
+    color: #ff4f81;
+    font-size: 18px;
+    margin-bottom: 6px;
+    position: relative;
+    z-index: 2;
+}
+
+.feature p {
+    color: #666;
+    font-size: 14px;
+    line-height: 1.5;
+    position: relative;
+    z-index: 2;
+}
+
+@media (max-width: 992px) {
+    .navbar { padding: 20px 30px; }
+    .hero { flex-direction: column; padding: 40px 30px; text-align: center; gap: 40px; }
+    .hero-text { width: 100%; }
+    .hero-text h1 { font-size: 42px; }
+    .hero-card { width: 100%; max-width: 440px; }
+}
