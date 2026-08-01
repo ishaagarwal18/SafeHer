@@ -134,11 +134,18 @@ EMAIL_PORT=587
 
 EMAIL_USE_TLS=True
 
-EMAIL_HOST_USER='ishaagarwal4688@gmail.com'
+EMAIL_USE_SSL=False
 
-EMAIL_HOST_PASSWORD='bdfqxqfwxknxhfha'
+EMAIL_HOST_USER='jdksbdwhdjd@gmail.com'
+
+EMAIL_HOST_PASSWORD='xsuipikrtqtwxcds'
 
 DEFAULT_FROM_EMAIL=EMAIL_HOST_USER
+
+# Twilio SMS config — replace with your actual credentials
+TWILIO_ACCOUNT_SID = 'your_twilio_account_sid'
+TWILIO_AUTH_TOKEN = 'your_twilio_auth_token'
+TWILIO_PHONE_NUMBER = '+1xxxxxxxxxx'  # your Twilio number
 
 CORS_ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
 CORS_ALLOW_CREDENTIALS = True

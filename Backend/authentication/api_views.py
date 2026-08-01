@@ -37,7 +37,10 @@ def api_send_otp(request):
     obj, _ = EmailOTP.objects.get_or_create(email=email)
     obj.otp = otp
     obj.is_verified = False
-    # Store signup data temporarily on the OTP record
+    # Store signup data on the OTP record — avoids cross-origin session issues
+    obj.signup_name = name
+    obj.signup_phone = phone
+    obj.signup_password = make_password(password)
     obj.save()
 
     # Keep signup data in session so verify step can use it
@@ -63,6 +66,9 @@ def api_send_otp(request):
 @api_view(["POST"])
 def api_verify_otp(request):
     """Step 2 of signup: verify OTP and create account."""
+    from django.utils import timezone
+    from datetime import timedelta
+
     email = request.data.get("email", "").strip().lower()
     otp = request.data.get("otp", "").strip()
 
@@ -74,21 +80,29 @@ def api_verify_otp(request):
     except EmailOTP.DoesNotExist:
         return Response({"error": "OTP not found. Please sign up again."}, status=status.HTTP_400_BAD_REQUEST)
 
+    # Check expiry (10 minutes)
+    if timezone.now() > obj.created_at + timedelta(minutes=10):
+        return Response({"error": "OTP expired. Please click Resend OTP."}, status=status.HTTP_400_BAD_REQUEST)
+
     if obj.otp != otp:
         return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
 
     if UserProfile.objects.filter(email=email).exists():
         return Response({"error": "Account already exists. Please login."}, status=status.HTTP_400_BAD_REQUEST)
 
-    name = request.session.get("signup_name")
-    phone = request.session.get("signup_phone")
-    hashed_pw = request.session.get("signup_password")
+    # Use signup data stored on the OTP record (session-independent)
+    name = obj.signup_name or request.session.get("signup_name")
+    phone = obj.signup_phone or request.session.get("signup_phone")
+    hashed_pw = obj.signup_password or request.session.get("signup_password")
 
     if not all([name, phone, hashed_pw]):
-        return Response({"error": "Session expired. Please sign up again."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Signup data missing. Please sign up again."}, status=status.HTTP_400_BAD_REQUEST)
 
     UserProfile.objects.create(name=name, email=email, phone=phone, password=hashed_pw)
     obj.is_verified = True
+    obj.signup_name = None
+    obj.signup_phone = None
+    obj.signup_password = None
     obj.save()
     request.session.flush()
 
@@ -124,3 +138,35 @@ def api_login(request):
 def api_logout(request):
     request.session.flush()
     return Response({"message": "Logged out."}, status=status.HTTP_200_OK)
+
+@api_view(["POST"])
+def api_resend_otp(request):
+    """Resend OTP — signup data is preserved from the OTP record."""
+    email = request.data.get("email", "").strip().lower()
+    if not email:
+        return Response({"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        obj = EmailOTP.objects.get(email=email)
+    except EmailOTP.DoesNotExist:
+        return Response({"error": "No signup in progress for this email. Please sign up again."}, status=status.HTTP_400_BAD_REQUEST)
+
+    name = obj.signup_name or "User"
+    otp = str(random.randint(100000, 999999))
+    obj.otp = otp
+    obj.is_verified = False
+    obj.save()  # auto_now resets created_at → fresh 10-minute window
+
+    try:
+        send_mail(
+            subject="SafeHer — New OTP",
+            message=f"Hello {name},\n\nYour new OTP is: {otp}\n\nValid for 10 minutes. Do not share it.\n\nTeam SafeHer",
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+    except Exception as e:
+        print("RESEND OTP ERROR:", e)
+        return Response({"error": "Failed to send OTP. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response({"message": "OTP resent successfully."}, status=status.HTTP_200_OK)

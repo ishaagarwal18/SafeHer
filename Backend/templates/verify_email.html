@@ -207,27 +207,22 @@
     </form>
 
     {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
 
-        <p class="error">
-
-            {{ error }}
-
-        </p>
-
+    {% if success %}
+        <p style="color:#2e7d32;margin-top:15px;font-size:14px;">{{ success }}</p>
     {% endif %}
 
     <div class="resend">
-
-        Didn't receive the OTP?
-
-        <br>
-
-        <a href="#">
-
-            Resend OTP
-
-        </a>
-
+        Didn't receive the OTP?<br>
+        <form method="POST" action="{% url 'resend_otp' %}" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="email" value="{{ email }}">
+            <button type="submit" style="background:none;border:none;color:#ff4f81;font-weight:600;cursor:pointer;font-size:14px;padding:0;">
+                Resend OTP
+            </button>
+        </form>
     </div>
 
 </div>

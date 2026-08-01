@@ -6,8 +6,10 @@ function getCookie(name) {
     return match ? decodeURIComponent(match[2]) : null;
 }
 
+const hostname = typeof window !== "undefined" && window.location.hostname ? window.location.hostname : "127.0.0.1";
+
 const api = axios.create({
-    baseURL: "http://127.0.0.1:8000/api/",
+    baseURL: `http://${hostname}:8000/api/`,
     withCredentials: true,
 });
 
@@ -22,7 +24,7 @@ api.interceptors.request.use((config) => {
 
 // Separate instance for endpoints under /dashboard/
 export const dashboardApi = axios.create({
-    baseURL: "http://127.0.0.1:8000/dashboard/",
+    baseURL: `http://${hostname}:8000/dashboard/`,
     withCredentials: true,
 });
 
@@ -35,3 +37,4 @@ dashboardApi.interceptors.request.use((config) => {
 });
 
 export default api;
+

@@ -6,7 +6,7 @@ import Loader from "../components/Loader";
 
 function Contacts() {
   const [contacts, setContacts] = useState([]);
-  const [form, setForm] = useState({ name: "", phone: "", relationship: "" });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", relationship: "" });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -39,7 +39,7 @@ function Contacts() {
     try {
       const res = await dashboardApi.post("api/contacts/", form);
       setContacts((prev) => [res.data, ...prev]);
-      setForm({ name: "", phone: "", relationship: "" });
+      setForm({ name: "", phone: "", email: "", relationship: "" });
       setSuccess("Contact added successfully!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
@@ -60,10 +60,23 @@ function Contacts() {
     }
   };
 
+  const deleteContact = async (contactId, name) => {
+    if (!window.confirm(`Are you sure you want to delete ${name}?`)) return;
+    try {
+      await dashboardApi.post(`api/contacts/${contactId}/delete/`);
+      setContacts((prev) => prev.filter((c) => c.id !== contactId));
+    } catch (_) {
+      alert("Could not delete contact.");
+    }
+  };
+
+  const trustedContacts = contacts.filter((c) => c.is_trusted);
+  const regularContacts = contacts.filter((c) => !c.is_trusted);
+
   return (
     <>
       <div className="container">
-        <h1 className="page-title">📞 Trusted Emergency Contacts</h1>
+        <h1 className="page-title">📞 Emergency Contacts</h1>
 
         <div className="card">
           <h2>Add New Contact</h2>
@@ -91,9 +104,17 @@ function Contacts() {
             />
 
             <input
+              type="email"
+              name="email"
+              placeholder="Email Address (for SOS alerts)"
+              value={form.email}
+              onChange={handleChange}
+            />
+
+            <input
               type="text"
               name="relationship"
-              placeholder="Relationship (e.g. Mother, Friend)"
+              placeholder="Relationship (e.g. Mom, Friend)"
               value={form.relationship}
               onChange={handleChange}
               required
@@ -108,9 +129,9 @@ function Contacts() {
           </form>
         </div>
 
+        {/* Trusted Contacts Table */}
         <div className="card">
-          <h2>Saved Contacts List</h2>
-
+          <h2 style={{ color: "#db2777" }}>⭐ Trusted Contacts</h2>
           {loading ? (
             <Loader message="Loading contacts..." />
           ) : (
@@ -119,23 +140,19 @@ function Contacts() {
                 <tr>
                   <th>Name</th>
                   <th>Phone</th>
+                  <th>Email</th>
                   <th>Relationship</th>
-                  <th>Status</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {contacts.length > 0 ? (
-                  contacts.map((contact) => (
+                {trustedContacts.length > 0 ? (
+                  trustedContacts.map((contact) => (
                     <tr key={contact.id}>
                       <td><strong>{contact.contact_name}</strong></td>
                       <td>{contact.phone_number}</td>
+                      <td>{contact.email || "—"}</td>
                       <td>{contact.relationship}</td>
-                      <td>
-                        <span className={`status-badge ${contact.is_trusted ? "completed" : "pending"}`}>
-                          {contact.is_trusted ? "Trusted" : "Standard"}
-                        </span>
-                      </td>
                       <td>
                         <button
                           type="button"
@@ -143,19 +160,96 @@ function Contacts() {
                           style={{
                             padding: "6px 12px",
                             fontSize: "0.85rem",
-                            background: contact.is_trusted ? "#64748b" : "#db2777"
+                            background: "linear-gradient(135deg, #ff8585, #ffb3b3)",
+                            marginRight: "6px"
                           }}
                           onClick={() => toggleTrust(contact.id)}
                         >
-                          {contact.is_trusted ? "Untrust" : "Make Trusted"}
+                          Remove Trust
+                        </button>
+                        <button
+                          type="button"
+                          className="btn"
+                          style={{
+                            padding: "6px 12px",
+                            fontSize: "0.85rem",
+                            background: "#e11d48"
+                          }}
+                          onClick={() => deleteContact(contact.id, contact.contact_name)}
+                        >
+                          Delete
                         </button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>
-                      No Contacts Found. Add your first trusted contact above.
+                    <td colSpan="5" style={{ textAlign: "center", padding: "16px", color: "#888", fontStyle: "italic" }}>
+                      No trusted contacts yet. Add contacts and mark them as trusted.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* All Contacts Table */}
+        <div className="card">
+          <h2>📋 All Contacts</h2>
+          {loading ? (
+            <Loader message="Loading contacts..." />
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Email</th>
+                  <th>Relationship</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {regularContacts.length > 0 ? (
+                  regularContacts.map((contact) => (
+                    <tr key={contact.id}>
+                      <td><strong>{contact.contact_name}</strong></td>
+                      <td>{contact.phone_number}</td>
+                      <td>{contact.email || "—"}</td>
+                      <td>{contact.relationship}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn"
+                          style={{
+                            padding: "6px 12px",
+                            fontSize: "0.85rem",
+                            marginRight: "6px"
+                          }}
+                          onClick={() => toggleTrust(contact.id)}
+                        >
+                          Mark Trusted ⭐
+                        </button>
+                        <button
+                          type="button"
+                          className="btn"
+                          style={{
+                            padding: "6px 12px",
+                            fontSize: "0.85rem",
+                            background: "linear-gradient(135deg, #ff8585, #ffb3b3)"
+                          }}
+                          onClick={() => deleteContact(contact.id, contact.contact_name)}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: "center", padding: "16px", color: "#888", fontStyle: "italic" }}>
+                      No other contacts added yet.
                     </td>
                   </tr>
                 )}
