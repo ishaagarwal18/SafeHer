@@ -22,11 +22,11 @@
 
 <input type="text"
 name="source"
-placeholder="Source">
+placeholder="Source" required>
 
 <input type="text"
 name="destination"
-placeholder="Destination">
+placeholder="Destination" required>
 
 <select name="transport">
 
@@ -36,12 +36,15 @@ placeholder="Destination">
 
 </select>
 
-<button class="btn">
+<button class="btn" type="submit">
 Start Journey
 </button>
 
 </form>
+</div>
 
+<div class="card">
+<h2>Recent Journeys</h2>
 <table>
 
 <tr>
@@ -49,6 +52,7 @@ Start Journey
 <th>Destination</th>
 <th>Transport</th>
 <th>Status</th>
+<th>Action</th>
 </tr>
 
 {% for j in journeys %}
@@ -57,9 +61,18 @@ Start Journey
 <td>{{ j.source }}</td>
 <td>{{ j.destination }}</td>
 <td>{{ j.transport_mode }}</td>
-<td>{{ j.status }}</td>
+<td><span class="status-pill">{{ j.status }}</span></td>
+<td>
+    <button type="button" class="btn-sm" onclick="openGoogleMaps('{{ j.source|escapejs }}', '{{ j.destination|escapejs }}', '{{ j.transport_mode|escapejs }}')">
+        Open Map
+    </button>
+</td>
 </tr>
 
+{% empty %}
+<tr>
+    <td colSpan="5" style="text-align: center;">No Journey Found</td>
+</tr>
 {% endfor %}
 
 </table>
@@ -67,10 +80,22 @@ Start Journey
 </div>
 
 </div>
+
 <div class="nav-links">
     <a href="/dashboard/" class="btn">
         Back to Dashboard
     </a>
 </div>
+
+<script>
+function openGoogleMaps(source, destination, transport) {
+    let mode = 'driving';
+    if (transport && (transport.toLowerCase() === 'bus' || transport.toLowerCase() === 'train')) {
+        mode = 'transit';
+    }
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(source)}&destination=${encodeURIComponent(destination)}&travelmode=${mode}`;
+    window.open(url, '_blank');
+}
+</script>
 </body>
 </html>
