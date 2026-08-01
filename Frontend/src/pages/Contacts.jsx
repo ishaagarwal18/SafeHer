@@ -1,162 +1,177 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "../styles/features.css";
-import api from "../services/api";
+import { dashboardApi } from "../services/api";
+import Loader from "../components/Loader";
 
 function Contacts() {
-    const [contacts, setContacts] = useState([]);
-    const [form, setForm] = useState({ name: "", phone: "", relationship: "" });
+  const [contacts, setContacts] = useState([]);
+  const [form, setForm] = useState({ name: "", phone: "", relationship: "" });
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-    const fetchContacts = async () => {
-        try {
-            const res = await api.get("contacts/");
-            setContacts(Array.isArray(res.data) ? res.data : (res.data?.results || []));
-        } catch (err) {
-            console.log(err);
-            setContacts([]);
-        }
-    };
+  const fetchContacts = () => {
+    dashboardApi
+      .get("api/contacts/")
+      .then((res) => {
+        setContacts(Array.isArray(res.data) ? res.data : []);
+      })
+      .catch(() => {
+        setContacts([]);
+      })
+      .finally(() => setLoading(false));
+  };
 
-    useEffect(() => {
-        fetchContacts();
-    }, []);
+  useEffect(() => {
+    fetchContacts();
+  }, []);
 
-    const [msg, setMsg] = useState("");
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setSubmitting(true);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setMsg("");
-        try {
-            const res = await api.post("contacts/", form);
-            setForm({ name: "", phone: "", relationship: "" });
-            setMsg(res.data?.message || "✅ Contact added successfully!");
-            fetchContacts();
-        } catch (err) {
-            console.log(err);
-            setMsg(err.response?.data?.error || "Failed to add contact.");
-        }
-    };
+    try {
+      const res = await dashboardApi.post("api/contacts/", form);
+      setContacts((prev) => [res.data, ...prev]);
+      setForm({ name: "", phone: "", relationship: "" });
+      setSuccess("Contact added successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to add contact.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    const handleAddTrusted = async (e, contactId) => {
-        e.preventDefault();
-        setMsg("");
-        try {
-            const res = await api.post("add-trusted-contact/", { contact_id: contactId });
-            setMsg(res.data?.message || "⭐ Added to Trusted Contacts!");
-            fetchContacts();
-        } catch (err) {
-            console.log(err);
-        }
-    };
+  const toggleTrust = async (contactId) => {
+    try {
+      const res = await dashboardApi.post(`api/contacts/${contactId}/trust/`);
+      setContacts((prev) =>
+        prev.map((c) => (c.id === contactId ? { ...c, is_trusted: res.data.is_trusted } : c))
+      );
+    } catch (_) {
+      alert("Could not update contact status.");
+    }
+  };
 
-    return (
-        <div className="feature-page">
-            <div className="container">
-                <h1 className="page-title">
-                    📞 Trusted Contacts
-                </h1>
+  return (
+    <div className="feature-page">
+      <div className="container">
+        <h1 className="page-title">📞 Trusted Emergency Contacts</h1>
 
-                {msg && (
-                    <div style={{
-                        background: "#dcfce7",
-                        border: "1px solid #bbf7d0",
-                        color: "#15803d",
-                        padding: "14px 20px",
-                        borderRadius: "16px",
-                        marginBottom: "20px",
-                        textAlign: "center",
-                        fontWeight: "600",
-                        fontSize: "16px"
-                    }}>
-                        {msg}
-                    </div>
-                )}
+        <div className="card">
+          <h2>Add New Contact</h2>
+          <form onSubmit={handleSubmit}>
+            <input
+              type="text"
+              name="name"
+              placeholder="Contact Name"
+              value={form.name}
+              onChange={handleChange}
+              required
+            />
 
-                {/* Add Contact Form */}
-                <div className="card">
-                    <form onSubmit={handleSubmit}>
-                        <input
-                            type="text"
-                            name="name"
-                            placeholder="Contact Name"
-                            value={form.name}
-                            onChange={handleChange}
-                            required
-                        />
+            <input
+              type="tel"
+              name="phone"
+              placeholder="Phone Number (10 digits)"
+              maxLength="10"
+              value={form.phone}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 10);
+                setForm({ ...form, phone: val });
+              }}
+              required
+            />
 
-                        <input
-                            type="tel"
-                            name="phone"
-                            placeholder="Phone Number"
-                            pattern="[6789][0-9]{9}"
-                            maxLength="10"
-                            inputMode="numeric"
-                            value={form.phone}
-                            onChange={handleChange}
-                            onInput={(e) => {
-                                e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
-                            }}
-                            title="Phone number must start with 6, 7, 8, or 9 and contain exactly 10 digits."
-                            required
-                        />
+            <input
+              type="text"
+              name="relationship"
+              placeholder="Relationship (e.g. Mother, Friend)"
+              value={form.relationship}
+              onChange={handleChange}
+              required
+            />
 
-                        <input
-                            type="text"
-                            name="relationship"
-                            placeholder="Relationship"
-                            value={form.relationship}
-                            onChange={handleChange}
-                            required
-                        />
+            {error && <p style={{ color: "red", margin: "8px 0" }}>{error}</p>}
+            {success && <p style={{ color: "green", margin: "8px 0", fontWeight: "bold" }}>{success}</p>}
 
-                        <button type="submit" className="btn">
-                            Add Contact
-                        </button>
-                    </form>
-                </div>
-
-                <div className="card">
-                    <h2>Saved Contacts</h2>
-
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Phone</th>
-                                <th>Relationship</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {Array.isArray(contacts) && contacts.map((contact) => (
-                                <tr key={contact.id}>
-                                    <td>{contact.contact_name}</td>
-                                    <td>{contact.phone_number}</td>
-                                    <td>{contact.relationship}</td>
-                                    <td>
-                                        <form onSubmit={(e) => handleAddTrusted(e, contact.id)}>
-                                            <input type="hidden" name="contact_id" value={contact.id} />
-                                            <button type="submit" className="btn">
-                                                Add to Trusted Contacts
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div className="nav-links" style={{ textAlign: "center", margin: "20px 0" }}>
-                <Link to="/dashboard" className="btn">
-                    ← Back to Dashboard
-                </Link>
-            </div>
+            <button type="submit" className="btn" disabled={submitting}>
+              {submitting ? "Adding..." : "Add Contact"}
+            </button>
+          </form>
         </div>
-    );
+
+        <div className="card">
+          <h2>Saved Contacts List</h2>
+
+          {loading ? (
+            <Loader message="Loading contacts..." />
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Relationship</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {contacts.length > 0 ? (
+                  contacts.map((contact) => (
+                    <tr key={contact.id}>
+                      <td><strong>{contact.contact_name}</strong></td>
+                      <td>{contact.phone_number}</td>
+                      <td>{contact.relationship}</td>
+                      <td>
+                        <span className={`status-badge ${contact.is_trusted ? "completed" : "pending"}`}>
+                          {contact.is_trusted ? "Trusted" : "Standard"}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn"
+                          style={{
+                            padding: "6px 12px",
+                            fontSize: "0.85rem",
+                            background: contact.is_trusted ? "#64748b" : "#db2777"
+                          }}
+                          onClick={() => toggleTrust(contact.id)}
+                        >
+                          {contact.is_trusted ? "Untrust" : "Make Trusted"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>
+                      No Contacts Found. Add your first trusted contact above.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      <div className="nav-links" style={{ textAlign: "center", margin: "20px 0" }}>
+        <Link to="/dashboard" className="btn">
+          ← Back to Dashboard
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 export default Contacts;

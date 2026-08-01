@@ -8,35 +8,48 @@ from dashboard.models import SOSAlert
 from reports.models import UnsafeReport
 
 
+def _get_user(request):
+    """Return the logged-in UserProfile from session, or None."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return None
+    try:
+        return UserProfile.objects.get(id=user_id)
+    except UserProfile.DoesNotExist:
+        return None
+
+
 @api_view(["GET"])
 def dashboard_data(request):
-    user_id = request.session.get("user_id")
-    trusted_contacts = EmergencyContact.objects.filter(is_trusted=True)
-    if user_id:
-        trusted_contacts = trusted_contacts.filter(user_id=user_id)
+    user = _get_user(request)
+    if user:
+        contacts_qs = EmergencyContact.objects.filter(user=user, is_trusted=True)
+    else:
+        contacts_qs = EmergencyContact.objects.filter(is_trusted=True)
 
     contacts = [
         {
-            "id": person.id,
-            "contact_name": person.contact_name,
-            "phone_number": person.phone_number,
-            "relationship": person.relationship,
+            "id": p.id,
+            "contact_name": p.contact_name,
+            "phone_number": p.phone_number,
+            "relationship": p.relationship,
         }
-        for person in trusted_contacts
+        for p in contacts_qs
     ]
 
     return Response({
         "journey_count": Journey.objects.count(),
-        "contact_count": EmergencyContact.objects.count(),
+        "contact_count": EmergencyContact.objects.filter(user=user).count() if user else EmergencyContact.objects.count(),
         "sos_count": SOSAlert.objects.count(),
-        "contact": contacts
+        "contact": contacts,
     })
 
 
 @api_view(["GET", "POST"])
 def api_contacts(request):
-    user_id = request.session.get("user_id")
-    user = UserProfile.objects.filter(id=user_id).first() or UserProfile.objects.first()
+    user = _get_user(request)
+    if not user:
+        user = UserProfile.objects.first()
 
     if not user:
         user, _ = UserProfile.objects.get_or_create(
@@ -60,6 +73,11 @@ def api_contacts(request):
         )
         return Response({
             "message": "Contact added successfully.",
+            "id": contact.id,
+            "contact_name": contact.contact_name,
+            "phone_number": contact.phone_number,
+            "relationship": contact.relationship,
+            "is_trusted": contact.is_trusted,
             "contact": {
                 "id": contact.id,
                 "contact_name": contact.contact_name,
@@ -69,10 +87,7 @@ def api_contacts(request):
             }
         }, status=status.HTTP_201_CREATED)
 
-    contacts = EmergencyContact.objects.all()
-    if user_id:
-        contacts = contacts.filter(user_id=user_id)
-
+    contacts = EmergencyContact.objects.filter(user=user) if user else EmergencyContact.objects.all()
     contacts_list = [
         {
             "id": c.id,
@@ -85,6 +100,8 @@ def api_contacts(request):
     ]
     return Response(contacts_list, status=status.HTTP_200_OK)
 
+contacts_api = api_contacts
+
 
 @api_view(["POST"])
 def api_add_trusted_contact(request):
@@ -96,7 +113,18 @@ def api_add_trusted_contact(request):
         contact = EmergencyContact.objects.get(id=contact_id)
         contact.is_trusted = True
         contact.save()
-        return Response({"message": "Added to trusted contacts."}, status=status.HTTP_200_OK)
+        return Response({"message": "Added to trusted contacts.", "id": contact.id, "is_trusted": True}, status=status.HTTP_200_OK)
+    except EmergencyContact.DoesNotExist:
+        return Response({"error": "Contact not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(["POST"])
+def mark_trusted_api(request, contact_id):
+    try:
+        contact = EmergencyContact.objects.get(id=contact_id)
+        contact.is_trusted = not contact.is_trusted
+        contact.save()
+        return Response({"id": contact.id, "is_trusted": contact.is_trusted}, status=status.HTTP_200_OK)
     except EmergencyContact.DoesNotExist:
         return Response({"error": "Contact not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -119,13 +147,19 @@ def api_journeys(request):
         )
         return Response({
             "message": "Journey started.",
+            "id": journey.id,
+            "source": journey.source,
+            "destination": journey.destination,
+            "transport_mode": journey.transport_mode,
+            "status": journey.status,
+            "start_time": journey.start_time.strftime("%Y-%m-%d %H:%M") if journey.start_time else "",
             "journey": {
                 "id": journey.id,
                 "source": journey.source,
                 "destination": journey.destination,
                 "transport_mode": journey.transport_mode,
                 "status": journey.status,
-                "start_time": journey.start_time.strftime("%Y-%m-%d %H:%M"),
+                "start_time": journey.start_time.strftime("%Y-%m-%d %H:%M") if journey.start_time else "",
             }
         }, status=status.HTTP_201_CREATED)
 
@@ -143,6 +177,8 @@ def api_journeys(request):
     ]
     return Response(result, status=status.HTTP_200_OK)
 
+journey_api = api_journeys
+
 
 @api_view(["GET", "POST"])
 def api_sos(request):
@@ -159,9 +195,13 @@ def api_sos(request):
         )
         return Response({
             "message": "SOS Alert sent successfully!",
+            "id": alert.id,
+            "alert_time": alert.alert_time.strftime("%Y-%m-%d %H:%M") if alert.alert_time else "",
+            "status": alert.status,
+            "location": alert.location,
             "alert": {
                 "id": alert.id,
-                "alert_time": alert.alert_time.strftime("%Y-%m-%d %H:%M"),
+                "alert_time": alert.alert_time.strftime("%Y-%m-%d %H:%M") if alert.alert_time else "",
                 "status": alert.status,
                 "location": alert.location,
             }
@@ -174,10 +214,14 @@ def api_sos(request):
             "alert_time": a.alert_time.strftime("%Y-%m-%d %H:%M") if a.alert_time else "",
             "status": a.status,
             "location": a.location or "Location not specified",
+            "latitude": a.latitude,
+            "longitude": a.longitude,
         }
         for a in alerts
     ]
     return Response(result, status=status.HTTP_200_OK)
+
+sos_api = api_sos
 
 
 @api_view(["GET", "POST"])
@@ -197,6 +241,10 @@ def api_reports(request):
         )
         return Response({
             "message": "Unsafe report submitted successfully.",
+            "id": rep.id,
+            "area_name": rep.area_name,
+            "issue_type": rep.issue_type,
+            "description": rep.description,
             "report": {
                 "id": rep.id,
                 "area_name": rep.area_name,
@@ -215,4 +263,6 @@ def api_reports(request):
         }
         for r in reports
     ]
-    return Response(result, status=status.HTTP_200_OK)
+    return Response(result, status=status.HTTP_200_OK)
+
+report_api = api_reports

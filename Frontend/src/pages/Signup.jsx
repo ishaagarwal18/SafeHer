@@ -13,12 +13,14 @@ function Signup() {
         confirm_password: "",
     });
     const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
+        setLoading(true);
         try {
             const res = await api.post("send-otp/", form);
             navigate("/verify-email", {
@@ -31,99 +33,40 @@ function Signup() {
                 }
             });
         } catch (err) {
-            setError(err.response?.data?.error || "Signup failed.");
+            setError(err.response?.data?.error || "Signup failed. Please try again.");
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <div className="auth-page">
-            <div className="auth-card">
-                <div className="logo">
-                    🛡
+        <div className="auth-card">
+            <div className="logo">🛡</div>
+            <h1>Create Your Account</h1>
+            <p className="subtitle">Join SafeHer and make every journey safer.</p>
+            <form onSubmit={handleSubmit}>
+                <div className="input-group">
+                    <input type="text" name="name" placeholder="Full Name" value={form.name} onChange={handleChange} required />
                 </div>
-
-                <h1>Create Your Account</h1>
-
-                <p className="subtitle">
-                    Join SafeHer and make every journey safer.
-                </p>
-
-                <form onSubmit={handleSubmit}>
-                    <div className="input-group">
-                        <input
-                            type="text"
-                            name="name"
-                            placeholder="Full Name"
-                            value={form.name}
-                            onChange={handleChange}
-                            required
-                        />
-                    </div>
-
-                    <div className="input-group">
-                        <input
-                            type="email"
-                            name="email"
-                            placeholder="Email Address"
-                            value={form.email}
-                            onChange={handleChange}
-                            required
-                        />
-                    </div>
-
-                    <div className="input-group">
-                        <input
-                            type="text"
-                            name="phone"
-                            maxLength="10"
-                            placeholder="Mobile Number"
-                            value={form.phone}
-                            onChange={handleChange}
-                            required
-                        />
-                    </div>
-
-                    <div className="input-group">
-                        <input
-                            type="password"
-                            id="password"
-                            name="password"
-                            placeholder="Password"
-                            value={form.password}
-                            onChange={handleChange}
-                            required
-                        />
-                    </div>
-
-                    <div className="input-group">
-                        <input
-                            type="password"
-                            id="confirm_password"
-                            name="confirm_password"
-                            placeholder="Confirm Password"
-                            value={form.confirm_password}
-                            onChange={handleChange}
-                            required
-                        />
-                    </div>
-
-                    {error && (
-                        <p className="error">
-                            {error}
-                        </p>
-                    )}
-
-                    <button type="submit">
-                        Send OTP
-                    </button>
-                </form>
-
-                <div className="extra">
-                    Already have an account?{" "}
-                    <Link to="/login">
-                        Login
-                    </Link>
+                <div className="input-group">
+                    <input type="email" name="email" placeholder="Email Address" value={form.email} onChange={handleChange} required />
                 </div>
+                <div className="input-group">
+                    <input type="text" name="phone" maxLength="10" placeholder="Mobile Number" value={form.phone} onChange={handleChange} required />
+                </div>
+                <div className="input-group">
+                    <input type="password" name="password" placeholder="Password" value={form.password} onChange={handleChange} required />
+                </div>
+                <div className="input-group">
+                    <input type="password" name="confirm_password" placeholder="Confirm Password" value={form.confirm_password} onChange={handleChange} required />
+                </div>
+                {error && <p className="error">{error}</p>}
+                <button type="submit" disabled={loading}>
+                    {loading ? "Sending OTP..." : "Send OTP"}
+                </button>
+            </form>
+            <div className="extra">
+                Already have an account? <Link to="/login">Login</Link>
             </div>
         </div>
     );

@@ -21,18 +21,11 @@ function Home() {
             <section className="hero">
                 <div className="hero-text">
                     <h1>
-                        Your Safety,{" "}
-                        <span>Your Journey</span>
+                        Your Safety, <span>Your Journey</span>
                     </h1>
-
                     <p>
-                        Travel smarter and safer with
-                        emergency SOS alerts,
-                        safe journey tracking,
-                        nearby safe places and
-                        trusted contact support.
+                        Travel smarter and safer with emergency SOS alerts, safe journey tracking, nearby safe places and trusted contact support.
                     </p>
-
                     <Link to="/signup" className="btn">
                         Get Started
                     </Link>
@@ -45,26 +38,17 @@ function Home() {
 
                     <div className="feature">
                         <h3>Safe Journey</h3>
-                        <p>
-                            Track travel and get
-                            safe check-ins.
-                        </p>
+                        <p>Track travel and get safe check-ins.</p>
                     </div>
 
                     <div className="feature">
                         <h3>SOS Emergency</h3>
-                        <p>
-                            Send emergency alerts
-                            instantly.
-                        </p>
+                        <p>Send emergency alerts instantly.</p>
                     </div>
 
                     <div className="feature">
                         <h3>Nearby Safe Places</h3>
-                        <p>
-                            Hospitals, police stations
-                            and pharmacies.
-                        </p>
+                        <p>Hospitals, police stations and pharmacies.</p>
                     </div>
                 </div>
             </section>

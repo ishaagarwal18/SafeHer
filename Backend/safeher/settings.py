@@ -53,8 +53,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    "corsheaders.middleware.CorsMiddleware",
-    'django.middleware.security.SecurityMiddleware',
 ]
 
 ROOT_URLCONF = 'safeher.urls'
@@ -138,11 +136,12 @@ EMAIL_USE_TLS=True
 
 EMAIL_HOST_USER='ishaagarwal4688@gmail.com'
 
-EMAIL_HOST_PASSWORD='dikflpybfzxwbzrk'
+EMAIL_HOST_PASSWORD = 'dikflpybfzxwbzrk'
 
-DEFAULT_FROM_EMAIL=EMAIL_HOST_USER
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
@@ -157,6 +156,9 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://127.0.0.1:5174",
 ]
+
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_HTTPONLY = True
 
 REST_FRAMEWORK={
     'DEFAULT_AUTHENTICATION_CLASSES':(
