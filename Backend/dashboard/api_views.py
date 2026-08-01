@@ -25,14 +25,8 @@ def dashboard_data(request):
     user = _get_user(request)
     if user:
         contacts_qs = EmergencyContact.objects.filter(user=user, is_trusted=True)
-        journey_count = Journey.objects.count()
-        contact_count = EmergencyContact.objects.filter(user=user).count()
-        sos_count = SOSAlert.objects.count()
     else:
         contacts_qs = EmergencyContact.objects.filter(is_trusted=True)
-        journey_count = Journey.objects.count()
-        contact_count = EmergencyContact.objects.count()
-        sos_count = SOSAlert.objects.count()
 
     contacts = [
         {
@@ -46,9 +40,9 @@ def dashboard_data(request):
     ]
 
     return Response({
-        "journey_count": journey_count,
-        "contact_count": contact_count,
-        "sos_count": sos_count,
+        "journey_count": Journey.objects.count(),
+        "contact_count": EmergencyContact.objects.filter(user=user).count() if user else EmergencyContact.objects.count(),
+        "sos_count": SOSAlert.objects.count(),
         "contact": contacts,
     })
 
@@ -59,7 +53,7 @@ def dashboard_data(request):
 def contacts_api(request):
     user = _get_user(request)
     if not user:
-        user = UserProfile.objects.first()  # fallback for dev
+        user = UserProfile.objects.first()
 
     if request.method == "GET":
         contacts = EmergencyContact.objects.filter(user=user) if user else EmergencyContact.objects.all()
@@ -77,8 +71,8 @@ def contacts_api(request):
         return Response(data)
 
     # POST — add a new contact
-    name = request.data.get("name", "").strip()
-    phone = request.data.get("phone", "").strip()
+    name = request.data.get("name", "").strip() or request.data.get("contact_name", "").strip()
+    phone = request.data.get("phone", "").strip() or request.data.get("phone_number", "").strip()
     email = request.data.get("email", "").strip()
     relationship = request.data.get("relationship", "").strip()
 
@@ -99,19 +93,42 @@ def contacts_api(request):
         "email": contact.email or "",
         "relationship": contact.relationship,
         "is_trusted": contact.is_trusted,
+        "contact": {
+            "id": contact.id,
+            "contact_name": contact.contact_name,
+            "phone_number": contact.phone_number,
+            "relationship": contact.relationship,
+            "is_trusted": contact.is_trusted,
+        }
     }, status=status.HTTP_201_CREATED)
+
+api_contacts = contacts_api
 
 
 @api_view(["POST"])
 def mark_trusted_api(request, contact_id):
     try:
         contact = EmergencyContact.objects.get(id=contact_id)
+        contact.is_trusted = not contact.is_trusted
+        contact.save()
+        return Response({"id": contact.id, "is_trusted": contact.is_trusted}, status=status.HTTP_200_OK)
     except EmergencyContact.DoesNotExist:
         return Response({"error": "Contact not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    contact.is_trusted = not contact.is_trusted
-    contact.save()
-    return Response({"id": contact.id, "is_trusted": contact.is_trusted})
+
+@api_view(["POST"])
+def api_add_trusted_contact(request):
+    contact_id = request.data.get("contact_id")
+    if not contact_id:
+        return Response({"error": "Contact ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        contact = EmergencyContact.objects.get(id=contact_id)
+        contact.is_trusted = True
+        contact.save()
+        return Response({"message": "Added to trusted contacts.", "id": contact.id, "is_trusted": True}, status=status.HTTP_200_OK)
+    except EmergencyContact.DoesNotExist:
+        return Response({"error": "Contact not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(["POST", "DELETE"])
@@ -146,11 +163,11 @@ def journey_api(request):
 
     source = request.data.get("source", "").strip()
     destination = request.data.get("destination", "").strip()
-    transport = request.data.get("transport", "").strip()
+    transport = request.data.get("transport", "").strip() or request.data.get("transport_mode", "").strip()
     force = request.data.get("force", False)
 
     if not all([source, destination, transport]):
-        return Response({"error": "All fields are required."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Source, destination, and transport mode are required."}, status=status.HTTP_400_BAD_REQUEST)
 
     # Check for unsafe area warning
     if not force:
@@ -178,7 +195,17 @@ def journey_api(request):
         "transport_mode": journey.transport_mode,
         "status": journey.status,
         "start_time": journey.start_time,
+        "journey": {
+            "id": journey.id,
+            "source": journey.source,
+            "destination": journey.destination,
+            "transport_mode": journey.transport_mode,
+            "status": journey.status,
+            "start_time": journey.start_time,
+        }
     }, status=status.HTTP_201_CREATED)
+
+api_journeys = journey_api
 
 
 # ── SOS ───────────────────────────────────────────────────────────────────────
@@ -192,7 +219,7 @@ def sos_api(request):
                 "id": a.id,
                 "alert_time": a.alert_time,
                 "status": a.status,
-                "location": a.location,
+                "location": a.location or "Location not specified",
                 "latitude": a.latitude,
                 "longitude": a.longitude,
             }
@@ -200,7 +227,7 @@ def sos_api(request):
         ]
         return Response(data)
 
-    location = request.data.get("location", "")
+    location = request.data.get("location", "").strip() or "Emergency GPS Location Alert"
     latitude = request.data.get("latitude", "")
     longitude = request.data.get("longitude", "")
 
@@ -230,7 +257,15 @@ def sos_api(request):
         "location": alert.location,
         "notified_count": trusted_contacts.count(),
         "message": f"SOS Alert sent! Notified {trusted_contacts.count()} trusted contact(s).",
+        "alert": {
+            "id": alert.id,
+            "alert_time": alert.alert_time,
+            "status": alert.status,
+            "location": alert.location,
+        }
     }, status=status.HTTP_201_CREATED)
+
+api_sos = sos_api
 
 
 # ── Reports ───────────────────────────────────────────────────────────────────
@@ -270,5 +305,12 @@ def report_api(request):
         "description": report.description,
         "created_at": report.created_at,
         "message": "Report submitted successfully.",
+        "report": {
+            "id": report.id,
+            "area_name": report.area_name,
+            "issue_type": report.issue_type,
+            "description": report.description,
+        }
     }, status=status.HTTP_201_CREATED)
 
+api_reports = report_api

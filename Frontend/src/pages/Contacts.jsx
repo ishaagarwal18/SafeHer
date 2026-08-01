@@ -74,7 +74,7 @@ function Contacts() {
   const regularContacts = contacts.filter((c) => !c.is_trusted);
 
   return (
-    <>
+    <div className="feature-page">
       <div className="container">
         <h1 className="page-title">📞 Emergency Contacts</h1>
 
@@ -264,7 +264,7 @@ function Contacts() {
           ← Back to Dashboard
         </Link>
       </div>
-    </>
+    </div>
   );
 }
 

@@ -18,11 +18,12 @@ function Dashboard() {
         dashboardApi.get("dashboard-data/")
             .then((res) => setData(res.data))
             .catch(() => {
-                // If not logged in or error, fail silently — counts stay at 0
+                // If error, fail silently
             });
     }, []);
 
-    const handleLogout = async () => {
+    const handleLogout = async (e) => {
+        if (e) e.preventDefault();
         try {
             await api.post("logout/");
         } catch (_) {
@@ -56,48 +57,44 @@ function Dashboard() {
             </div>
 
             <div className="grid">
-                <div className="feature-card sos-card">
+                <div className="feature-card sos-card" onClick={() => navigate("/sos")}>
                     <h2>🚨 SOS</h2>
                     <p>Trigger emergency alert</p>
-                    <Link to="/sos">Open</Link>
+                    <Link to="/sos" onClick={(e) => e.stopPropagation()}>Open</Link>
                 </div>
-                <div className="feature-card">
+                <div className="feature-card" onClick={() => navigate("/contacts")}>
                     <h2>📞 Emergency Contacts</h2>
                     <p>Manage trusted people</p>
-                    <Link to="/contacts">Open</Link>
+                    <Link to="/contacts" onClick={(e) => e.stopPropagation()}>Open</Link>
                 </div>
-                <div className="feature-card">
+                <div className="feature-card" onClick={() => navigate("/journey")}>
                     <h2>🚖 Start Journey</h2>
                     <p>Begin safe travel tracking</p>
-                    <Link to="/journey">Open</Link>
+                    <Link to="/journey" onClick={(e) => e.stopPropagation()}>Open</Link>
                 </div>
-                <div className="feature-card">
+                <div className="feature-card" onClick={() => navigate("/safe-places")}>
                     <h2>📍 Nearby Safe Places</h2>
                     <p>Hospitals & police stations</p>
-                    <Link to="/safe-places">Open</Link>
+                    <Link to="/safe-places" onClick={(e) => e.stopPropagation()}>Open</Link>
                 </div>
-                <div className="feature-card">
+                <div className="feature-card" onClick={() => navigate("/report")}>
                     <h2>⚠️ Report Unsafe Area</h2>
                     <p>Help others stay safe</p>
-                    <Link to="/report">Open</Link>
+                    <Link to="/report" onClick={(e) => e.stopPropagation()}>Open</Link>
                 </div>
-                <div className="feature-card">
+                <div className="feature-card" onClick={() => navigate("/history")}>
                     <h2>🧭 Journey History</h2>
                     <p>View previous trips</p>
-                    <Link to="/history">Open</Link>
+                    <Link to="/history" onClick={(e) => e.stopPropagation()}>Open</Link>
                 </div>
             </div>
 
             <div className="quick-section">
                 <h2>Trusted Contacts</h2>
-                {data.contact.length > 0 ? (
+                {data.contact && data.contact.length > 0 ? (
                     data.contact.map((person, index) => (
                         <div className="contact-box" key={index}>
-                            <strong>{person.contact_name}</strong>
-                            {" • "}
-                            {person.phone_number}
-                            {" • "}
-                            {person.relationship}
+                            <strong>{person.contact_name}</strong> • {person.phone_number} • {person.relationship}
                         </div>
                     ))
                 ) : (

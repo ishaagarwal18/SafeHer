@@ -22,6 +22,7 @@ function Login() {
             // Store user info and update AuthContext
             if (login) login(res.data.user);
             else localStorage.setItem("user", JSON.stringify(res.data.user));
+
             navigate("/dashboard");
         } catch (err) {
             setError(err.response?.data?.error || "Login failed. Please try again.");

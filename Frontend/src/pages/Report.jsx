@@ -4,16 +4,19 @@ import "../styles/features.css";
 import { dashboardApi } from "../services/api";
 
 function Report() {
-  const [form, setForm] = useState({ area: "", issue: "", description: "" });
   const [reports, setReports] = useState([]);
+  const [form, setForm] = useState({ area: "", issue: "", description: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const fetchReports = () => {
-    dashboardApi.get("api/report/")
-      .then((res) => setReports(Array.isArray(res.data) ? res.data : []))
-      .catch(() => {});
+  const fetchReports = async () => {
+    try {
+      const res = await dashboardApi.get("api/report/");
+      setReports(Array.isArray(res.data) ? res.data : []);
+    } catch (_) {
+      setReports([]);
+    }
   };
 
   useEffect(() => {
@@ -46,12 +49,12 @@ function Report() {
   };
 
   return (
-    <>
+    <div className="feature-page">
       <div className="container">
         <h1 className="page-title">⚠️ Report Unsafe Area</h1>
 
         <div className="card" style={{ maxWidth: "700px", margin: "0 auto 24px" }}>
-          <p style={{ color: "var(--text-muted, #64748b)", marginBottom: "20px" }}>
+          <p style={{ color: "#64748b", marginBottom: "20px" }}>
             Alert other women and emergency responders about poorly lit streets, unsafe incidents, or suspicious activity.
           </p>
 
@@ -60,7 +63,7 @@ function Report() {
               <input
                 type="text"
                 name="area"
-                placeholder="Area Name / Location"
+                placeholder="Area Name / Location (e.g. Sector 62)"
                 value={form.area}
                 onChange={handleChange}
                 required
@@ -82,7 +85,7 @@ function Report() {
               <textarea
                 name="description"
                 rows="4"
-                placeholder="Describe the issue..."
+                placeholder="Describe what happened or why this area felt unsafe..."
                 value={form.description}
                 onChange={handleChange}
                 required
@@ -110,9 +113,9 @@ function Report() {
               {reports.length > 0 ? (
                 reports.map((r, i) => (
                   <tr key={r.id || i}>
-                    <td><strong>{r.area_name}</strong></td>
+                    <td><strong>{r.area_name || r.area || r.location}</strong></td>
                     <td>
-                      <span className="status-badge pending">{r.issue_type || "General"}</span>
+                      <span className="status-badge pending">{r.issue_type || r.issue || "General"}</span>
                     </td>
                     <td>{r.description}</td>
                   </tr>
@@ -129,12 +132,12 @@ function Report() {
         </div>
       </div>
 
-      <div className="nav-links" style={{ textAlign: "center" }}>
+      <div className="nav-links" style={{ textAlign: "center", margin: "20px 0" }}>
         <Link to="/dashboard" className="btn">
           ← Back to Dashboard
         </Link>
       </div>
-    </>
+    </div>
   );
 }
 

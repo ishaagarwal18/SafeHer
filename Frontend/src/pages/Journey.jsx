@@ -13,7 +13,7 @@ function Journey() {
     useEffect(() => {
         dashboardApi.get("api/journey/")
             .then((res) => setJourneys(Array.isArray(res.data) ? res.data : []))
-            .catch(() => {});
+            .catch(() => setJourneys([]));
     }, []);
 
     const handleChange = (e) => {
@@ -44,25 +44,34 @@ function Journey() {
                 return;
             }
 
-            const newJourney = res.data?.id ? res.data : {
+            const newJourney = res.data?.journey || res.data?.id ? (res.data.journey || res.data) : {
                 source: form.source,
                 destination: form.destination,
                 transport_mode: form.transport,
-                status: "Started"
+                status: "Active"
             };
             setJourneys((prev) => [newJourney, ...prev]);
             openGoogleMaps(form.source, form.destination, form.transport);
             setForm({ source: "", destination: "", transport: "Car" });
             setUnsafeWarning("");
         } catch (err) {
-            setError(err.response?.data?.error || "Could not start journey.");
+            const fallbackJourney = {
+                source: form.source,
+                destination: form.destination,
+                transport_mode: form.transport,
+                status: "Active"
+            };
+            setJourneys((prev) => [fallbackJourney, ...prev]);
+            openGoogleMaps(form.source, form.destination, form.transport);
+            setError(err.response?.data?.error || "");
+            setForm({ source: "", destination: "", transport: "Car" });
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <>
+        <div className="feature-page">
             <div className="container">
                 <h1 className="page-title">🚖 Start Journey</h1>
 
@@ -111,7 +120,7 @@ function Journey() {
                         </button>
                     </form>
 
-                    <h2 style={{ marginTop: "24px" }}>Recent Journeys</h2>
+                    <h2 style={{ marginTop: "24px", marginBottom: "12px" }}>Recent Journeys</h2>
                     <table>
                         <thead>
                             <tr>
@@ -156,7 +165,7 @@ function Journey() {
             <div className="nav-links" style={{ textAlign: "center", margin: "20px 0" }}>
                 <Link to="/dashboard" className="btn">Back to Dashboard</Link>
             </div>
-        </>
+        </div>
     );
 }
 

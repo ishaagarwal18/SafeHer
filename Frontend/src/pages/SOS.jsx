@@ -82,14 +82,13 @@ function SOS() {
     };
 
     return (
-        <>
+        <div className="feature-page">
             <div className="container">
                 <h1 className="page-title">🚨 Emergency SOS</h1>
 
                 <div className="card">
                     <h2>Need Immediate Help?</h2>
-                    <p>Press the button below to notify trusted contacts with your current location.</p>
-                    <br />
+                    <p style={{ marginBottom: "16px" }}>Press the button below to notify trusted contacts with your current location.</p>
 
                     <div
                         style={{
@@ -122,12 +121,45 @@ function SOS() {
                         {locationStatus.text}
                     </div>
 
+                    <div style={{
+                        background: "rgba(255, 240, 243, 0.9)",
+                        border: "1.5px solid #ffccd5",
+                        borderRadius: "16px",
+                        padding: "16px 22px",
+                        marginBottom: "20px",
+                        color: "#e11d48",
+                        textAlign: "left"
+                    }}>
+                        <div style={{ fontWeight: "700", fontSize: "16px", marginBottom: "6px" }}>
+                            📍 Location Details
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Enter or edit your location details..."
+                            value={location}
+                            onChange={(e) => setLocation(e.target.value)}
+                            style={{
+                                width: "100%",
+                                padding: "10px 14px",
+                                borderRadius: "10px",
+                                border: "1px solid #ffccd5",
+                                fontSize: "14px",
+                                background: "white"
+                            }}
+                        />
+                    </div>
+
                     <form onSubmit={handleSubmit}>
                         <input type="hidden" name="latitude" value={latitude} readOnly />
                         <input type="hidden" name="longitude" value={longitude} readOnly />
-                        <input type="hidden" name="location" value={location} readOnly />
-                        <button className="btn" disabled={loading} style={{ width: "100%", padding: "14px", fontSize: "16px", fontWeight: "bold" }}>
-                            {loading ? "SENDING EMERGENCY ALERT..." : "SEND SOS ALERT"}
+                        <button className="btn" type="submit" disabled={loading} style={{
+                            background: "linear-gradient(135deg, #ff0044, #ff4f81)",
+                            width: "100%",
+                            padding: "16px",
+                            fontSize: "17px",
+                            letterSpacing: "1px"
+                        }}>
+                            {loading ? "SENDING EMERGENCY ALERT..." : "🚨 SEND SOS ALERT"}
                         </button>
                     </form>
 
@@ -149,7 +181,7 @@ function SOS() {
                 </div>
 
                 <div className="card">
-                    <h2>SOS History</h2>
+                    <h2>Emergency History</h2>
                     <table>
                         <thead>
                             <tr>
@@ -162,17 +194,23 @@ function SOS() {
                             {alerts.length > 0 ? (
                                 alerts.map((alert, i) => (
                                     <tr key={alert.id || i}>
-                                        <td>{alert.alert_time ? new Date(alert.alert_time).toLocaleString() : "Recent"}</td>
-                                        <td>
-                                            <span className="status-badge completed">{alert.status}</span>
+                                        <td style={{ fontWeight: "600", whiteSpace: "nowrap" }}>
+                                            {alert.alert_time ? (typeof alert.alert_time === "string" ? alert.alert_time : new Date(alert.alert_time).toLocaleString()) : "Recent"}
                                         </td>
-                                        <td>{alert.location || "Location not available"}</td>
+                                        <td>
+                                            <span className="status-badge completed">
+                                                {alert.status || "Sent"}
+                                            </span>
+                                        </td>
+                                        <td style={{ maxWidth: "350px", wordBreak: "break-word" }}>
+                                            {alert.location || "GPS Location Alert"}
+                                        </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="3" style={{ textAlign: "center", padding: "20px" }}>
-                                        No SOS Alerts Sent Yet.
+                                    <td colSpan="3" style={{ textAlign: "center", padding: "24px", color: "#666" }}>
+                                        No emergency alerts recorded yet.
                                     </td>
                                 </tr>
                             )}
@@ -183,10 +221,10 @@ function SOS() {
 
             <div className="nav-links" style={{ textAlign: "center", margin: "20px 0" }}>
                 <Link to="/dashboard" className="btn">
-                    Back to Dashboard
+                    ← Back to Dashboard
                 </Link>
             </div>
-        </>
+        </div>
     );
 }
 
