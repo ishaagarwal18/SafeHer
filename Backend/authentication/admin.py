@@ -36,3 +36,4 @@ class EmailOTPAdmin(admin.ModelAdmin):
     list_display = ("email", "otp", "created_at", "is_verified")
     list_filter = ("is_verified",)
     search_fields = ("email",)
+
