@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "../styles/features.css";
 import { dashboardApi } from "../services/api";
-import Loader from "../components/Loader";
 
 function Contacts() {
   const [contacts, setContacts] = useState([]);
@@ -40,7 +39,7 @@ function Contacts() {
       const res = await dashboardApi.post("api/contacts/", form);
       setContacts((prev) => [res.data, ...prev]);
       setForm({ name: "", phone: "", email: "", relationship: "" });
-      setSuccess("✅ Contact added successfully!");
+      setSuccess("Contact added successfully!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       setError(err.response?.data?.error || "Failed to add contact.");
@@ -61,7 +60,7 @@ function Contacts() {
   };
 
   const deleteContact = async (contactId, name) => {
-    if (!window.confirm(`Are you sure you want to delete ${name}?`)) return;
+    if (!window.confirm(`Delete ${name}?`)) return;
     try {
       await dashboardApi.post(`api/contacts/${contactId}/delete/`);
       setContacts((prev) => prev.filter((c) => c.id !== contactId));
@@ -70,155 +69,205 @@ function Contacts() {
     }
   };
 
+  const trustedContacts = contacts.filter((c) => c.is_trusted);
+  const regularContacts = contacts.filter((c) => !c.is_trusted);
+
   return (
-    <div className="container">
-      <h1 className="page-title">📞 Trusted Emergency Contacts</h1>
+    <>
+      <div className="container">
+        <h1 className="page-title">📞 Emergency Contacts</h1>
 
-      <div className="card">
-        <h2>Add New Contact</h2>
+        {/* Add Contact Form */}
+        <div className="card">
+          <h2>Add New Contact</h2>
 
-        {error && (
-          <div className="alert-box alert-danger">
-            <p style={{ fontWeight: "700", margin: 0 }}>{error}</p>
-          </div>
-        )}
-        {success && (
-          <div className="alert-box alert-success">
-            <p style={{ fontWeight: "700", margin: 0 }}>{success}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
-            <div>
-              <label style={{ fontSize: "13px", fontWeight: "700", color: "#64748b" }}>Contact Name</label>
-              <input
-                type="text"
-                name="name"
-                placeholder="e.g. Priya Sharma"
-                value={form.name}
-                onChange={handleChange}
-                required
-              />
+          {error && (
+            <div
+              style={{
+                background: "#fff0f0",
+                border: "1px solid #ffb3b3",
+                color: "#c0392b",
+                padding: "12px 16px",
+                borderRadius: "12px",
+                marginBottom: "16px",
+                fontSize: "14px"
+              }}
+            >
+              {error}
             </div>
+          )}
 
-            <div>
-              <label style={{ fontSize: "13px", fontWeight: "700", color: "#64748b" }}>Phone Number</label>
-              <input
-                type="tel"
-                name="phone"
-                placeholder="10-digit mobile number"
-                maxLength="10"
-                value={form.phone}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 10);
-                  setForm({ ...form, phone: val });
-                }}
-                required
-              />
+          {success && (
+            <div
+              style={{
+                background: "#f0fff4",
+                border: "1px solid #9ae6b4",
+                color: "#276749",
+                padding: "12px 16px",
+                borderRadius: "12px",
+                marginBottom: "16px",
+                fontSize: "14px"
+              }}
+            >
+              {success}
             </div>
+          )}
 
-            <div>
-              <label style={{ fontSize: "13px", fontWeight: "700", color: "#64748b" }}>Email Address</label>
-              <input
-                type="email"
-                name="email"
-                placeholder="email@example.com (for SOS alerts)"
-                value={form.email}
-                onChange={handleChange}
-              />
-            </div>
+          <form onSubmit={handleSubmit}>
+            <input
+              type="text"
+              name="name"
+              placeholder="Contact Name"
+              value={form.name}
+              onChange={handleChange}
+              required
+            />
 
-            <div>
-              <label style={{ fontSize: "13px", fontWeight: "700", color: "#64748b" }}>Relationship</label>
-              <input
-                type="text"
-                name="relationship"
-                placeholder="e.g. Mother, Sister, Friend"
-                value={form.relationship}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
+            <input
+              type="tel"
+              name="phone"
+              placeholder="Phone Number (10 digits)"
+              maxLength="10"
+              inputMode="numeric"
+              value={form.phone}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 10);
+                setForm({ ...form, phone: val });
+              }}
+              required
+            />
 
-          <button type="submit" className="btn" disabled={submitting} style={{ marginTop: "10px" }}>
-            {submitting ? "Adding..." : "➕ Add Emergency Contact"}
-          </button>
-        </form>
-      </div>
+            <input
+              type="email"
+              name="email"
+              placeholder="Email Address (for SOS alerts)"
+              value={form.email}
+              onChange={handleChange}
+            />
 
-      <div className="card">
-        <h2>Saved Emergency Contacts List</h2>
+            <input
+              type="text"
+              name="relationship"
+              placeholder="Relationship (e.g. Mom, Friend)"
+              value={form.relationship}
+              onChange={handleChange}
+              required
+            />
 
-        {loading ? (
-          <Loader message="Loading trusted contacts..." />
-        ) : (
+            <button type="submit" className="btn" disabled={submitting}>
+              {submitting ? "Adding..." : "Add Contact"}
+            </button>
+          </form>
+        </div>
+
+        {/* Trusted Contacts Table */}
+        <div className="card">
+          <p style={{ fontSize: "18px", color: "#ff4f81", fontWeight: "600", marginBottom: "14px" }}>
+            ⭐ Trusted Contacts
+          </p>
           <table>
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Phone Number</th>
+                <th>Phone</th>
                 <th>Email</th>
                 <th>Relationship</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {contacts.length > 0 ? (
-                contacts.map((contact) => (
+              {trustedContacts.length > 0 ? (
+                trustedContacts.map((contact) => (
                   <tr key={contact.id}>
-                    <td>
-                      <strong>{contact.contact_name}</strong>
-                    </td>
-                    <td>📞 {contact.phone_number}</td>
+                    <td>{contact.contact_name}</td>
+                    <td>{contact.phone_number}</td>
                     <td>{contact.email || "—"}</td>
                     <td>{contact.relationship}</td>
                     <td>
-                      <span className={`status-badge ${contact.is_trusted ? "completed" : "pending"}`}>
-                        {contact.is_trusted ? "🛡️ Trusted" : "Standard"}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: "flex", gap: "8px" }}>
-                        <button
-                          type="button"
-                          className={contact.is_trusted ? "btn-sm" : "btn-sm btn-success"}
-                          onClick={() => toggleTrust(contact.id)}
-                        >
-                          {contact.is_trusted ? "Untrust" : "Make Trusted ⭐"}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-sm btn-danger"
-                          onClick={() => deleteContact(contact.id, contact.contact_name)}
-                        >
-                          Delete
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ background: "linear-gradient(135deg,#ff8585,#ffb3b3)" }}
+                        onClick={() => toggleTrust(contact.id)}
+                      >
+                        Remove Trust
+                      </button>
                     </td>
                   </tr>
                 ))
               ) : (
-                <tr>
-                  <td colSpan="6" style={{ textAlign: "center", padding: "24px", color: "#64748b" }}>
-                    No Contacts Found. Add your first trusted contact above.
+                <tr className="empty-row">
+                  <td colSpan="5" style={{ textAlign: "center", color: "#aaa", fontStyle: "italic", padding: "16px" }}>
+                    No trusted contacts yet. Add contacts below and mark them as trusted.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
-        )}
+        </div>
+
+        {/* All Contacts Table */}
+        <div className="card">
+          <p style={{ fontSize: "18px", color: "#ff4f81", fontWeight: "600", marginBottom: "14px" }}>
+            📋 All Contacts
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>Relationship</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {regularContacts.length > 0 ? (
+                regularContacts.map((contact) => (
+                  <tr key={contact.id}>
+                    <td>{contact.contact_name}</td>
+                    <td>{contact.phone_number}</td>
+                    <td>{contact.email || "—"}</td>
+                    <td>{contact.relationship}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ marginRight: "8px" }}
+                        onClick={() => toggleTrust(contact.id)}
+                      >
+                        Mark Trusted ⭐
+                      </button>
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ background: "linear-gradient(135deg,#ff8585,#ffb3b3)" }}
+                        onClick={() => deleteContact(contact.id, contact.contact_name)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr className="empty-row">
+                  <td colSpan="5" style={{ textAlign: "center", color: "#aaa", fontStyle: "italic", padding: "16px" }}>
+                    No contacts added yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="nav-links">
-        <Link to="/dashboard" className="btn btn-secondary">
+      <div className="nav-links" style={{ textAlign: "center", margin: "20px 0" }}>
+        <Link to="/dashboard" className="btn">
           ← Back to Dashboard
         </Link>
       </div>
-    </div>
+    </>
   );
 }
 
-export default Contacts;
+export default Contacts;

@@ -32,138 +32,84 @@ function Dashboard() {
 
   return (
     <div className="container">
-      {/* Top Banner Greeting */}
       <div className="top-section">
-        <div className="top-section-text">
-          <h1>Welcome to SafeHer 🛡️</h1>
-          <p>
-            Stay protected, connected, and confident{user.name ? `, ${user.name}` : ""}. Your personal safety hub.
-          </p>
+        <div>
+          <h1>Welcome to SafeHer 💖</h1>
+          <p>Stay protected and connected{user.name ? `, ${user.name}` : ""}.</p>
         </div>
-        <div className="top-actions">
-          <Link to="/sos" className="btn btn-danger" style={{ padding: "10px 20px" }}>
-            🚨 Emergency SOS
-          </Link>
-          <button className="logout-btn" onClick={handleLogout}>
-            Logout
-          </button>
-        </div>
+        <button className="logout-btn" onClick={handleLogout}>
+          Logout
+        </button>
       </div>
 
-      {/* Metrics Bar */}
       <div className="stats">
         <div className="stat-card">
-          <div className="stat-icon">🚖</div>
-          <div className="stat-card-info">
-            <h2>{data.journey_count}</h2>
-            <p>Active Journeys</p>
-          </div>
+          <h2>{data.journey_count}</h2>
+          <p>Journeys</p>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">📞</div>
-          <div className="stat-card-info">
-            <h2>{data.contact_count}</h2>
-            <p>Trusted Contacts</p>
-          </div>
+          <h2>{data.contact_count}</h2>
+          <p>Contacts</p>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">🚨</div>
-          <div className="stat-card-info">
-            <h2>{data.sos_count}</h2>
-            <p>SOS Alerts Sent</p>
-          </div>
+          <h2>{data.sos_count}</h2>
+          <p>SOS Alerts</p>
         </div>
       </div>
 
-      {/* Feature Cards Grid */}
       <div className="grid">
         <div className="feature-card sos-card">
-          <div className="feature-card-header">
-            <span className="feature-icon-wrapper">🚨</span>
-            <h2>Emergency SOS</h2>
-          </div>
-          <p>Instant panic alert button to send your live GPS location & SMS to trusted contacts.</p>
-          <Link to="/sos">Trigger SOS Alert →</Link>
+          <h2>🚨 SOS</h2>
+          <p>Trigger emergency alert</p>
+          <Link to="/sos">Open</Link>
         </div>
 
         <div className="feature-card">
-          <div className="feature-card-header">
-            <span className="feature-icon-wrapper">🚖</span>
-            <h2>Start Journey</h2>
-          </div>
-          <p>Begin safe route monitoring, GPS tracking & Community Unsafe Area warning alerts.</p>
-          <Link to="/journey">Start Tracking →</Link>
+          <h2>📞 Emergency Contacts</h2>
+          <p>Manage trusted people</p>
+          <Link to="/contacts">Open</Link>
         </div>
 
         <div className="feature-card">
-          <div className="feature-card-header">
-            <span className="feature-icon-wrapper">📍</span>
-            <h2>Nearby Safe Places</h2>
-          </div>
-          <p>Locate 15+ verified emergency centers including Police, Civil Hospitals, Pharmacies & Malls.</p>
-          <Link to="/safe-places">Explore Places →</Link>
+          <h2>🚖 Start Journey</h2>
+          <p>Begin safe travel tracking</p>
+          <Link to="/journey">Open</Link>
         </div>
 
         <div className="feature-card">
-          <div className="feature-card-header">
-            <span className="feature-icon-wrapper">📞</span>
-            <h2>Trusted Contacts</h2>
-          </div>
-          <p>Manage family members and close friends who receive your emergency alerts.</p>
-          <Link to="/contacts">Manage Contacts →</Link>
+          <h2>📍 Nearby Safe Places</h2>
+          <p>Hospitals & police stations</p>
+          <Link to="/safe-places">Open</Link>
         </div>
 
         <div className="feature-card">
-          <div className="feature-card-header">
-            <span className="feature-icon-wrapper">⚠️</span>
-            <h2>Report Unsafe Area</h2>
-          </div>
-          <p>Report poorly lit areas or harassment hotspots to help protect other women.</p>
-          <Link to="/report">File Report →</Link>
+          <h2>⚠️ Report Unsafe Area</h2>
+          <p>Help others stay safe</p>
+          <Link to="/report">Open</Link>
         </div>
 
         <div className="feature-card">
-          <div className="feature-card-header">
-            <span className="feature-icon-wrapper">🧭</span>
-            <h2>Trip History</h2>
-          </div>
-          <p>Review past travel logs, duration statistics, and route navigation records.</p>
-          <Link to="/history">View History →</Link>
+          <h2>🧭 Journey History</h2>
+          <p>View previous trips</p>
+          <Link to="/history">Open</Link>
         </div>
       </div>
 
-      {/* Trusted Contacts Quick Section */}
       <div className="quick-section">
-        <div className="quick-section-header">
-          <h2>🛡️ Your Trusted Guardians</h2>
-          <Link to="/contacts" className="btn-sm">
-            + Add Contact
-          </Link>
-        </div>
+        <h2>Trusted Contacts</h2>
 
-        <div className="contacts-grid">
-          {data.contact && data.contact.length > 0 ? (
-            data.contact.map((person, index) => (
-              <div className="contact-box" key={index}>
-                <div className="contact-avatar">{person.contact_name ? person.contact_name[0].toUpperCase() : "👤"}</div>
-                <div className="contact-details">
-                  <strong>{person.contact_name}</strong>
-                  <p>
-                    📞 {person.phone_number} • {person.relationship}
-                  </p>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="contact-box" style={{ gridColumn: "1 / -1", justifyContent: "center", color: "#64748b" }}>
-              No Trusted Contacts Added yet. Click "+ Add Contact" above.
+        {data.contact && data.contact.length > 0 ? (
+          data.contact.map((person, index) => (
+            <div className="contact-box" key={index}>
+              <strong>{person.contact_name}</strong> • {person.phone_number} • {person.relationship}
             </div>
-          )}
-        </div>
+          ))
+        ) : (
+          <div className="contact-box">No Trusted Contacts Added</div>
+        )}
       </div>
     </div>
   );
 }
 
 export default Dashboard;
-

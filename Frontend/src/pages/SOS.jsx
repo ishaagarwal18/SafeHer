@@ -7,10 +7,13 @@ function SOS() {
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [location, setLocation] = useState("");
+  const [locationStatus, setLocationStatus] = useState({
+    state: "fetching",
+    text: "Fetching your location, please wait..."
+  });
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [gpsStatus, setGpsStatus] = useState("Acquiring GPS location...");
 
   const fetchAlerts = () => {
     dashboardApi
@@ -29,28 +32,48 @@ function SOS() {
           const lon = position.coords.longitude;
           setLatitude(lat);
           setLongitude(lon);
-          setGpsStatus(`📍 Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+          setLocationStatus({
+            state: "ready",
+            text: `✅ Location found (${lat.toFixed(4)}, ${lon.toFixed(4)}), resolving address...`
+          });
+
           try {
             const res = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&addressdetails=1`
+              `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&addressdetails=1&zoom=18`
             );
             const data = await res.json();
-            const address = data.display_name || `${lat}, ${lon}`;
+            const a = data.address || {};
+            const parts = [
+              a.house_number ? `${a.house_number} ${a.road || ""}` : a.road || a.pedestrian || a.footway || "",
+              a.neighbourhood || a.suburb || a.quarter || a.residential || "",
+              a.village || a.town || a.city_district || a.county || a.city || "",
+              a.state || "",
+              a.postcode || ""
+            ]
+              .map((p) => p.trim())
+              .filter(Boolean);
+            const address = parts.join(", ") || data.display_name || `${lat}, ${lon}`;
             setLocation(address);
-            setGpsStatus(`📍 ${address}`);
+            setLocationStatus({ state: "ready", text: `✅ Location ready — ${address}` });
           } catch (_) {
             const fallbackLoc = `${lat}, ${lon}`;
             setLocation(fallbackLoc);
-            setGpsStatus(`📍 Coordinates: ${fallbackLoc}`);
+            setLocationStatus({ state: "ready", text: `✅ Location ready — ${fallbackLoc}` });
           }
         },
         () => {
-          setGpsStatus("⚠️ Location access denied. Defaulting to estimated area.");
+          setLocationStatus({
+            state: "error",
+            text: "⚠️ Could not fetch location — SOS alert will be sent without location."
+          });
         },
-        { enableHighAccuracy: true, timeout: 10000 }
+        { timeout: 10000 }
       );
     } else {
-      setGpsStatus("⚠️ Geolocation unsupported by browser.");
+      setLocationStatus({
+        state: "error",
+        text: "⚠️ Geolocation not supported by browser — SOS alert will be sent without location."
+      });
     }
   }, []);
 
@@ -61,183 +84,127 @@ function SOS() {
     try {
       const res = await dashboardApi.post("api/sos/", { latitude, longitude, location });
       fetchAlerts();
-      setMessage("✅ Emergency SOS alert dispatched to all trusted contacts & email!");
+      setMessage(res.data?.message || "🚨 Emergency SOS alert sent to your trusted contacts!");
     } catch (_) {
-      setMessage("⚠️ Failed to send SOS alert. Please call emergency services (112) immediately.");
+      setMessage("❌ Failed to send SOS alert. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="container">
-      <h1 className="page-title">🚨 Emergency SOS Dispatch</h1>
+    <>
+      <div className="container">
+        <h1 className="page-title">🚨 Emergency SOS</h1>
 
-      {/* Panic Button Card */}
-      <div
-        className="card"
-        style={{
-          background: "linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)",
-          border: "2px solid #ef4444",
-          textAlign: "center",
-          padding: "36px 24px"
-        }}
-      >
-        <h2 style={{ color: "#991b1b", fontSize: "24px", justifyContent: "center" }}>
-          Need Immediate Emergency Assistance?
-        </h2>
-        <p style={{ color: "#7f1d1d", fontSize: "15px", maxWidth: "600px", margin: "8px auto 24px" }}>
-          Tapping the panic button sends your live GPS coordinates & automated email/SMS alert to all your registered trusted contacts.
-        </p>
+        <div className="card">
+          <h2>Need Immediate Help?</h2>
+          <p>Press the button below to notify trusted contacts.</p>
+          <br />
 
-        <div style={{ margin: "20px 0" }}>
-          <form onSubmit={handleSubmit}>
-            <button
-              className="btn btn-danger"
-              disabled={loading}
-              style={{
-                width: "220px",
-                height: "220px",
-                borderRadius: "50%",
-                fontSize: "20px",
-                fontWeight: "900",
-                letterSpacing: "1px",
-                boxShadow: "0 0 40px rgba(239, 68, 68, 0.5), 0 10px 25px rgba(220, 38, 38, 0.4)",
-                border: "6px solid #ffffff",
-                display: "inline-flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                cursor: loading ? "not-allowed" : "pointer"
-              }}
-            >
-              <span style={{ fontSize: "48px" }}>🚨</span>
-              <span>{loading ? "SENDING..." : "TRIGGER SOS"}</span>
-            </button>
-          </form>
-        </div>
-
-        <div style={{ maxWidth: "600px", margin: "16px auto 0" }}>
-          <input
-            type="text"
-            placeholder="Edit or confirm your location details..."
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
+          <div
             style={{
-              width: "100%",
+              fontSize: "13px",
+              marginBottom: "14px",
               padding: "10px 14px",
               borderRadius: "10px",
-              border: "1px solid #fca5a5",
-              fontSize: "14px",
-              background: "#ffffff",
-              textAlign: "center"
+              background:
+                locationStatus.state === "ready"
+                  ? "#f0fff4"
+                  : locationStatus.state === "error"
+                  ? "#fff0f0"
+                  : "#fff8e1",
+              color:
+                locationStatus.state === "ready"
+                  ? "#276749"
+                  : locationStatus.state === "error"
+                  ? "#c0392b"
+                  : "#b8860b",
+              border: `1px solid ${
+                locationStatus.state === "ready"
+                  ? "#9ae6b4"
+                  : locationStatus.state === "error"
+                  ? "#ffb3b3"
+                  : "#ffe082"
+              }`,
+              fontWeight: "500"
             }}
-          />
-        </div>
-
-        <div
-          style={{
-            background: "#ffffff",
-            borderRadius: "14px",
-            padding: "10px 18px",
-            display: "inline-block",
-            border: "1px solid #fca5a5",
-            marginTop: "12px"
-          }}
-        >
-          <span style={{ fontSize: "13.5px", color: "#991b1b", fontWeight: "700" }}>{gpsStatus}</span>
-        </div>
-
-        {message && (
-          <div
-            className={`alert-box ${message.includes("✅") ? "alert-success" : "alert-danger"}`}
-            style={{ maxWidth: "600px", margin: "20px auto 0", justifyContent: "center" }}
           >
-            <p style={{ fontWeight: "700", margin: 0 }}>{message}</p>
+            {locationStatus.text}
           </div>
-        )}
-      </div>
 
-      {/* Emergency Hotlines Quick Call */}
-      <div className="card">
-        <h2>📞 Direct Emergency Dial Numbers</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginTop: "16px" }}>
-          <a href="tel:112" className="btn btn-danger" style={{ padding: "14px", fontSize: "15px" }}>
-            📞 112 National Emergency
-          </a>
-          <a
-            href="tel:1091"
-            className="btn"
-            style={{ padding: "14px", fontSize: "15px", background: "linear-gradient(135deg, #db2777, #be123c)" }}
-          >
-            👩 1091 Women Helpline
-          </a>
-          <a href="tel:100" className="btn btn-secondary" style={{ padding: "14px", fontSize: "15px" }}>
-            👮 100 Police Control
-          </a>
-          <a href="tel:108" className="btn btn-secondary" style={{ padding: "14px", fontSize: "15px" }}>
-            🚑 108 Medical Emergency
-          </a>
+          <form onSubmit={handleSubmit}>
+            <input type="hidden" name="latitude" value={latitude} readOnly />
+            <input type="hidden" name="longitude" value={longitude} readOnly />
+            <input type="hidden" name="location" value={location} readOnly />
+
+            <button className="btn" type="submit" disabled={loading}>
+              {loading ? "SENDING SOS..." : "SEND SOS ALERT"}
+            </button>
+          </form>
+
+          {message && (
+            <div
+              style={{
+                marginTop: "16px",
+                padding: "12px 16px",
+                borderRadius: "10px",
+                background: message.includes("🚨") ? "#f0fff4" : "#fff0f0",
+                color: message.includes("🚨") ? "#276749" : "#c0392b",
+                fontWeight: "600",
+                fontSize: "14px"
+              }}
+            >
+              {message}
+            </div>
+          )}
         </div>
-      </div>
 
-      {/* SOS History Table Card */}
-      <div className="card">
-        <h2>📜 SOS Alert Dispatch History</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Status</th>
-              <th>Location</th>
-              <th>Live Map Link</th>
-            </tr>
-          </thead>
-          <tbody>
-            {alerts.length > 0 ? (
-              alerts.map((alert, i) => (
-                <tr key={alert.id || i}>
-                  <td>
-                    <strong>{new Date(alert.alert_time).toLocaleString()}</strong>
-                  </td>
-                  <td>
-                    <span className="status-pill warning">{alert.status || "Sent"}</span>
-                  </td>
-                  <td>{alert.location || "Unknown location"}</td>
-                  <td>
-                    {alert.latitude && alert.longitude ? (
-                      <a
-                        href={`https://www.google.com/maps?q=${alert.latitude},${alert.longitude}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn-sm"
-                      >
-                        🗺 View Location
-                      </a>
-                    ) : (
-                      <span style={{ color: "#94a3b8", fontSize: "13px" }}>N/A</span>
-                    )}
+        <div className="card">
+          <h2>SOS History</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Status</th>
+                <th>Location</th>
+              </tr>
+            </thead>
+            <tbody>
+              {alerts.length > 0 ? (
+                alerts.map((alert, i) => (
+                  <tr key={alert.id || i}>
+                    <td>
+                      {alert.alert_time
+                        ? typeof alert.alert_time === "string"
+                          ? alert.alert_time
+                          : new Date(alert.alert_time).toLocaleString()
+                        : "Recent"}
+                    </td>
+                    <td>
+                      <span className="status-pill completed">{alert.status || "Sent"}</span>
+                    </td>
+                    <td>{alert.location || "Unknown"}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="3" style={{ textAlign: "center", color: "#aaa", fontStyle: "italic", padding: "16px" }}>
+                    No alerts sent yet.
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "#64748b" }}>
-                  No SOS Alerts Triggered yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="nav-links">
-        <Link to="/dashboard" className="btn btn-secondary">
-          ← Back to Dashboard
+      <div className="nav-links" style={{ textAlign: "center", margin: "20px 0" }}>
+        <Link to="/dashboard" className="btn">
+          Back to Dashboard
         </Link>
       </div>
-    </div>
+    </>
   );
 }
 
