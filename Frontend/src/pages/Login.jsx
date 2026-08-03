@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../styles/auth.css";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 function Login() {
     const navigate = useNavigate();
+    const { login } = useAuth();
     const [form, setForm] = useState({ email: "", password: "" });
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
@@ -17,8 +19,10 @@ function Login() {
         setLoading(true);
         try {
             const res = await api.post("login/", form);
-            // Store user info so other pages can use it
-            localStorage.setItem("user", JSON.stringify(res.data.user));
+            // Store user info and update AuthContext
+            if (login) login(res.data.user);
+            else localStorage.setItem("user", JSON.stringify(res.data.user));
+
             navigate("/dashboard");
         } catch (err) {
             setError(err.response?.data?.error || "Login failed. Please try again.");
@@ -26,6 +30,7 @@ function Login() {
             setLoading(false);
         }
     };
+
 
     return (
         <div className="auth-card">

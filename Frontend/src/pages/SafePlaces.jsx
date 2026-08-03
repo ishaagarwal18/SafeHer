@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import "../styles/features.css";
 
@@ -150,7 +150,7 @@ function SafePlaces() {
         setLocating(false);
         setLocationStatus(`📍 Located (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`);
       },
-      (error) => {
+      () => {
         setLocating(false);
         setLocationStatus("Unable to retrieve location. Defaulting to general search.");
       },

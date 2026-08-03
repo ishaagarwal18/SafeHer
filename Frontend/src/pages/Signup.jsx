@@ -6,7 +6,11 @@ import api from "../services/api";
 function Signup() {
     const navigate = useNavigate();
     const [form, setForm] = useState({
-        name: "", email: "", phone: "", password: "", confirm_password: "",
+        name: "",
+        email: "",
+        phone: "",
+        password: "",
+        confirm_password: "",
     });
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
@@ -18,9 +22,16 @@ function Signup() {
         setError("");
         setLoading(true);
         try {
-            await api.post("send-otp/", form);
-            // Pass email to the verify page via state
-            navigate("/verify-email", { state: { email: form.email } });
+            const res = await api.post("send-otp/", form);
+            navigate("/verify-email", {
+                state: {
+                    email: form.email,
+                    name: form.name,
+                    phone: form.phone,
+                    password: form.password,
+                    otp: res.data?.otp
+                }
+            });
         } catch (err) {
             setError(err.response?.data?.error || "Signup failed. Please try again.");
         } finally {

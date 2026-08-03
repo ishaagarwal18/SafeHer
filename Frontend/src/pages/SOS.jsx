@@ -12,11 +12,15 @@ function SOS() {
   const [message, setMessage] = useState("");
   const [gpsStatus, setGpsStatus] = useState("Acquiring GPS location...");
 
-  useEffect(() => {
+  const fetchAlerts = () => {
     dashboardApi
       .get("api/sos/")
       .then((res) => setAlerts(Array.isArray(res.data) ? res.data : []))
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchAlerts();
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -28,14 +32,17 @@ function SOS() {
           setGpsStatus(`📍 Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
           try {
             const res = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`
+              `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&addressdetails=1`
             );
             const data = await res.json();
-            if (data.display_name) {
-              setLocation(data.display_name);
-              setGpsStatus(`📍 ${data.display_name}`);
-            }
-          } catch (_) {}
+            const address = data.display_name || `${lat}, ${lon}`;
+            setLocation(address);
+            setGpsStatus(`📍 ${address}`);
+          } catch (_) {
+            const fallbackLoc = `${lat}, ${lon}`;
+            setLocation(fallbackLoc);
+            setGpsStatus(`📍 Coordinates: ${fallbackLoc}`);
+          }
         },
         () => {
           setGpsStatus("⚠️ Location access denied. Defaulting to estimated area.");
@@ -53,7 +60,7 @@ function SOS() {
     setMessage("");
     try {
       const res = await dashboardApi.post("api/sos/", { latitude, longitude, location });
-      setAlerts((prev) => [res.data, ...prev]);
+      fetchAlerts();
       setMessage("✅ Emergency SOS alert dispatched to all trusted contacts & email!");
     } catch (_) {
       setMessage("⚠️ Failed to send SOS alert. Please call emergency services (112) immediately.");
@@ -111,11 +118,29 @@ function SOS() {
           </form>
         </div>
 
+        <div style={{ maxWidth: "600px", margin: "16px auto 0" }}>
+          <input
+            type="text"
+            placeholder="Edit or confirm your location details..."
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "10px 14px",
+              borderRadius: "10px",
+              border: "1px solid #fca5a5",
+              fontSize: "14px",
+              background: "#ffffff",
+              textAlign: "center"
+            }}
+          />
+        </div>
+
         <div
           style={{
             background: "#ffffff",
             borderRadius: "14px",
-            padding: "12px 20px",
+            padding: "10px 18px",
             display: "inline-block",
             border: "1px solid #fca5a5",
             marginTop: "12px"

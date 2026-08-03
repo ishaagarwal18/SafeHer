@@ -21,7 +21,8 @@ function Dashboard() {
       .catch(() => {});
   }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = async (e) => {
+    if (e) e.preventDefault();
     try {
       await api.post("logout/");
     } catch (_) {}

@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "../styles/features.css";
 import { dashboardApi } from "../services/api";
-
 const TRANSPORT_ICONS = {
   car: "🚗",
   "cab / auto": "🚖",
