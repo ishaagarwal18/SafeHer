@@ -5,7 +5,6 @@ import api, { dashboardApi } from "../services/api";
 
 function Dashboard() {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const [data, setData] = useState({
     journey_count: 0,
@@ -35,11 +34,11 @@ function Dashboard() {
       <div className="top-section">
         <div>
           <h1>Welcome to SafeHer 💖</h1>
-          <p>Stay protected and connected{user.name ? `, ${user.name}` : ""}.</p>
+          <p>Stay protected and connected.</p>
         </div>
-        <button className="logout-btn" onClick={handleLogout}>
+        <a href="/" className="logout-btn" onClick={handleLogout}>
           Logout
-        </button>
+        </a>
       </div>
 
       <div className="stats">
