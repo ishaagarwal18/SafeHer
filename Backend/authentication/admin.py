@@ -1,8 +1,5 @@
 from django.contrib import admin
-
-# admin.site.register(EmergencyContact)
 from .models import UserProfile, EmergencyContact, EmailOTP
-
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
