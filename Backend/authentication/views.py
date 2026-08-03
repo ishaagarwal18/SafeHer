@@ -10,6 +10,10 @@ from django.conf import settings
 from .models import EmailOTP
 from django.contrib.auth.hashers import make_password, check_password
 from .serializers import UserProfileSerializer
+from django.utils import timezone
+from datetime import timedelta
+
+OTP_EXPIRY_MINUTES = 10
 
 def home(request):
     return render(request, 'index.html')
@@ -74,35 +78,21 @@ def send_email_otp(request):
         obj.save()
 
         # Send Email
-        send_mail(
-            subject="SafeHer Email Verification",
-            message=f"""
-Hello {name},
+        try:
+            send_mail(
+                subject="SafeHer Email Verification",
+                message=f"Hello {name},\n\nWelcome to SafeHer ❤️\n\nYour OTP is: {otp}\n\nValid for 5 minutes. Do not share it.\n\nTeam SafeHer",
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print("EMAIL ERROR:", e)  # visible in Django dev server console
+            return render(request, "signup.html", {
+                "error": f"Failed to send OTP email. Please check your email address and try again."
+            })
 
-Welcome to SafeHer ❤️
-
-Your Email Verification OTP is:
-
-{otp}
-
-This OTP is valid for 5 minutes.
-
-Do not share it with anyone.
-
-Team SafeHer
-""",
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=[email],
-            fail_silently=False,
-        )
-
-        return render(
-            request,
-            "verify_email.html",
-            {
-                "email": email
-            }
-        )
+        return render(request, "verify_email.html", {"email": email})
 
     return redirect("signup")
 
@@ -158,12 +148,19 @@ def contacts_page(request):
     )
 
 def verify_email(request):
-
     if request.method == "POST":
         email = request.POST.get("email")
         otp = request.POST.get("otp")
         try:
             obj = EmailOTP.objects.get(email=email)
+
+            # Check expiry
+            if timezone.now() > obj.created_at + timedelta(minutes=OTP_EXPIRY_MINUTES):
+                return render(request, "verify_email.html", {
+                    "email": email,
+                    "error": f"OTP expired. Please request a new one."
+                })
+
             if obj.otp == otp:
                 obj.is_verified = True
                 obj.save()
@@ -176,23 +173,46 @@ def verify_email(request):
                 request.session.flush()
                 return redirect("login")
             else:
-                return render(
-                    request,
-                    "verify_email.html",
-                    {
-                        "email": email,
-                        "error": "Invalid OTP"
-                    }
-                )
-        except EmailOTP.DoesNotExist:
-            return render(
-                request,
-                "verify_email.html",
-                {
+                return render(request, "verify_email.html", {
                     "email": email,
-                    "error": "OTP not found"
-                }
+                    "error": "Invalid OTP. Please try again."
+                })
+        except EmailOTP.DoesNotExist:
+            return render(request, "verify_email.html", {
+                "email": email,
+                "error": "OTP not found. Please sign up again."
+            })
+    return redirect("signup")
+
+
+def resend_otp(request):
+    if request.method == "POST":
+        email = request.POST.get("email") or request.session.get("signup_email")
+        name = request.session.get("signup_name", "User")
+        if not email:
+            return redirect("signup")
+
+        otp = str(random.randint(100000, 999999))
+        obj, _ = EmailOTP.objects.get_or_create(email=email)
+        obj.otp = otp
+        obj.is_verified = False
+        obj.save()  # auto_now=True resets created_at
+
+        try:
+            send_mail(
+                subject="SafeHer — New OTP",
+                message=f"Hello {name},\n\nYour new OTP is: {otp}\n\nValid for {OTP_EXPIRY_MINUTES} minutes. Do not share it.\n\nTeam SafeHer",
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=[email],
+                fail_silently=False,
             )
+        except Exception as e:
+            print("RESEND OTP EMAIL ERROR:", e)
+
+        return render(request, "verify_email.html", {
+            "email": email,
+            "success": "A new OTP has been sent to your email."
+        })
     return redirect("signup")
 
 

@@ -14,6 +14,8 @@ urlpatterns = [
     path('', dashboard_page, name='dashboard'),
     path('sos/', sos_page, name='sos'),
     path('contacts/', contacts_page, name='contacts'),
+    path('contacts/remove_trusted/', remove_trusted_contact, name='remove_trusted_contact'),
+    path('contacts/delete/', delete_contact, name='delete_contact'),
     path('journey/', journey_page),
     path('places/', places_page),
     path('reports/', reports_page),
