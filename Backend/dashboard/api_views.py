@@ -1,3 +1,10 @@
+import json
+from datetime import timedelta
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+
+from django.conf import settings
+from django.utils import timezone
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -7,6 +14,7 @@ from authentication.models import EmergencyContact, UserProfile
 from dashboard.models import SOSAlert
 from reports.models import UnsafeReport
 from .views import _send_sos_sms
+from journey.services import send_safety_check_email, send_trusted_contact_escalation
 
 
 def _get_user(request):
@@ -79,6 +87,12 @@ def contacts_api(request):
     if not all([name, phone, relationship]):
         return Response({"error": "Name, phone, and relationship are required."}, status=status.HTTP_400_BAD_REQUEST)
 
+    if not phone.isdigit() or len(phone) != 10:
+        return Response({"error": "Phone number must be exactly 10 digits."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if email and "@" not in email:
+        return Response({"error": "Please enter a valid email address."}, status=status.HTTP_400_BAD_REQUEST)
+
     contact = EmergencyContact.objects.create(
         user=user,
         contact_name=name,
@@ -142,24 +156,99 @@ def delete_contact_api(request, contact_id):
     return Response({"message": "Contact deleted successfully."})
 
 
+TRANSPORT_TO_GOOGLE_MODE = {
+    "Car": "DRIVE",
+    "Bus": "TRANSIT",
+    "Train": "TRANSIT",
+    "Walking": "WALK",
+}
+
+
+def _journey_user(request):
+    return _get_user(request) or UserProfile.objects.first()
+
+
+def _duration_minutes(duration):
+    try:
+        return max(1, round(int(str(duration).rstrip("s")) / 60))
+    except (TypeError, ValueError):
+        return None
+
+
+def _google_route_estimate(source, destination, transport):
+    """Use Google Routes data so the displayed ETA follows Google Maps traffic data."""
+    api_key = getattr(settings, "GOOGLE_MAPS_API_KEY", "")
+    if not api_key:
+        return {"available": False, "message": "Add GOOGLE_MAPS_API_KEY to enable the live Google Maps ETA."}
+
+    payload = {
+        "origin": {"address": source},
+        "destination": {"address": destination},
+        "travelMode": TRANSPORT_TO_GOOGLE_MODE.get(transport, "DRIVE"),
+        "departureTime": timezone.now().isoformat(),
+    }
+    if payload["travelMode"] == "DRIVE":
+        payload["routingPreference"] = "TRAFFIC_AWARE"
+    route_request = Request(
+        "https://routes.googleapis.com/directions/v2:computeRoutes",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": api_key,
+            "X-Goog-FieldMask": "routes.duration,routes.distanceMeters",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(route_request, timeout=10) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        route = (data.get("routes") or [None])[0]
+        minutes = _duration_minutes(route.get("duration") if route else None)
+        if not minutes:
+            return {"available": False, "message": "Google Maps did not return a route for these locations."}
+        return {
+            "available": True,
+            "duration_minutes": minutes,
+            "distance_meters": route.get("distanceMeters"),
+            "message": f"Google Maps ETA: about {minutes} min",
+        }
+    except HTTPError as error:
+        return {
+            "available": False,
+            "message": f"Google Maps denied the ETA request (HTTP {error.code}). Check that billing is active and Routes API is enabled for this key.",
+        }
+    except (URLError, TimeoutError):
+        return {"available": False, "message": "SafeHer could not reach Google Maps. Check your internet connection and try again."}
+    except (ValueError, json.JSONDecodeError):
+        return {"available": False, "message": "Google Maps returned an invalid route response. Check the source and destination."}
+
+
+def _serialize_journey(journey):
+    return {
+        "id": journey.id,
+        "source": journey.source,
+        "destination": journey.destination,
+        "transport_mode": journey.transport_mode,
+        "status": journey.status,
+        "start_time": journey.start_time,
+        "completed_at": journey.completed_at,
+        "expected_duration_minutes": journey.expected_duration_minutes,
+        "estimated_arrival_at": journey.estimated_arrival_at,
+        "safety_check_pending": journey.safety_check_pending,
+        "safety_check_count": journey.safety_check_count,
+        "missed_check_count": journey.missed_check_count,
+        "escalated_at": journey.escalated_at,
+    }
+
+
 # ── Journey ───────────────────────────────────────────────────────────────────
 
 @api_view(["GET", "POST"])
 def journey_api(request):
+    user = _journey_user(request)
     if request.method == "GET":
-        journeys = Journey.objects.all().order_by("-start_time")
-        data = [
-            {
-                "id": j.id,
-                "source": j.source,
-                "destination": j.destination,
-                "transport_mode": j.transport_mode,
-                "status": j.status,
-                "start_time": j.start_time,
-            }
-            for j in journeys
-        ]
-        return Response(data)
+        journeys = Journey.objects.filter(user=user).order_by("-start_time") if user else Journey.objects.all().order_by("-start_time")
+        return Response([_serialize_journey(journey) for journey in journeys])
 
     source = request.data.get("source", "").strip()
     destination = request.data.get("destination", "").strip()
@@ -183,29 +272,86 @@ def journey_api(request):
                     status=status.HTTP_200_OK,
                 )
 
+    route_estimate = _google_route_estimate(source, destination, transport)
+    duration = route_estimate.get("duration_minutes")
+    estimated_arrival = timezone.now() + timedelta(minutes=duration) if duration else None
     journey = Journey.objects.create(
+        user=user,
         source=source,
         destination=destination,
         transport_mode=transport,
+        expected_duration_minutes=duration,
+        estimated_arrival_at=estimated_arrival,
+        next_safety_check_at=estimated_arrival,
     )
-    return Response({
-        "id": journey.id,
-        "source": journey.source,
-        "destination": journey.destination,
-        "transport_mode": journey.transport_mode,
-        "status": journey.status,
-        "start_time": journey.start_time,
-        "journey": {
-            "id": journey.id,
-            "source": journey.source,
-            "destination": journey.destination,
-            "transport_mode": journey.transport_mode,
-            "status": journey.status,
-            "start_time": journey.start_time,
-        }
-    }, status=status.HTTP_201_CREATED)
+    journey_data = _serialize_journey(journey)
+    return Response({**journey_data, "journey": journey_data, "route_estimate": route_estimate}, status=status.HTTP_201_CREATED)
 
 api_journeys = journey_api
+
+
+@api_view(["POST"])
+def journey_estimate_api(request):
+    source = request.data.get("source", "").strip()
+    destination = request.data.get("destination", "").strip()
+    transport = request.data.get("transport", "Car").strip()
+    if not source or not destination:
+        return Response({"error": "Source and destination are required."}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(_google_route_estimate(source, destination, transport))
+
+
+@api_view(["GET"])
+def active_journey_api(request):
+    user = _journey_user(request)
+    journeys = Journey.objects.filter(status="Active")
+    if user:
+        journeys = journeys.filter(user=user)
+    journey = journeys.order_by("-start_time").first()
+    return Response({"journey": _serialize_journey(journey) if journey else None})
+
+
+@api_view(["POST"])
+def journey_complete_api(request, journey_id):
+    user = _journey_user(request)
+    journeys = Journey.objects.filter(id=journey_id)
+    if user:
+        journeys = journeys.filter(user=user)
+    journey = journeys.first()
+    if not journey:
+        return Response({"error": "Journey not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    journey.status = "Completed"
+    journey.completed_at = timezone.now()
+    journey.safety_check_pending = False
+    journey.next_safety_check_at = None
+    journey.save(update_fields=["status", "completed_at", "safety_check_pending", "next_safety_check_at"])
+    return Response({"message": "Journey completed safely.", "journey": _serialize_journey(journey)})
+
+
+@api_view(["POST"])
+def journey_check_in_api(request, journey_id):
+    """Record an answer to the ETA safety prompt."""
+    user = _journey_user(request)
+    journeys = Journey.objects.filter(id=journey_id, status="Active")
+    if user:
+        journeys = journeys.filter(user=user)
+    journey = journeys.first()
+    if not journey:
+        return Response({"error": "Active journey not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.data.get("response", "safe") == "safe":
+        journey.status = "Completed"
+        journey.completed_at = timezone.now()
+        journey.next_safety_check_at = None
+        journey.safety_check_pending = False
+        message = "Thanks for checking in. Your journey is marked completed."
+    else:
+        journey.safety_check_pending = False
+        journey.missed_check_count = 0
+        journey.next_safety_check_at = timezone.now() + timedelta(minutes=getattr(settings, "SAFETY_CHECK_INTERVAL_MINUTES", 10))
+        message = "Check-in recorded. We will ask again if your journey continues."
+    journey.save()
+    return Response({"message": message, "journey": _serialize_journey(journey)})
 
 
 # ── SOS ───────────────────────────────────────────────────────────────────────
