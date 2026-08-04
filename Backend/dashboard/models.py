@@ -29,14 +29,8 @@ class SOSSession(models.Model):
     initial_longitude = models.CharField(max_length=50, blank=True, null=True)
     initial_location = models.TextField(blank=True, null=True)
     last_known_location = models.TextField(blank=True, null=True)
-    nearest_station_name = models.CharField(max_length=255, blank=True, null=True)
-    nearest_station_type = models.CharField(max_length=100, blank=True, null=True)
-    nearest_station_phone = models.CharField(max_length=50, blank=True, null=True)
-    nearest_station_email = models.CharField(max_length=100, blank=True, null=True)
-    nearest_station_distance_km = models.FloatField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
 
     class Meta:
         ordering = ["-start_time"]

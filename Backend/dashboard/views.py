@@ -152,118 +152,72 @@ def _send_sos_sms(location, trusted_contacts, user_name="", latitude="", longitu
             print(f"SOS email error for {contact.contact_name}: {e}")
 
 
-def _find_and_notify_nearest_station(lat_str, lon_str, user_name="", user_phone="", location_address=""):
-    """
-    Find the nearest Police Station or Women Safety Center based on live GPS coordinates,
-    send an emergency email alert to the station, and return station details.
-    """
-    import math
-    import requests
+def _send_safe_email(trusted_contacts, user_name="", duration_str="", location=""):
+    """Send an HTML email notification to trusted contacts when the user marks themselves as safe."""
     from django.core.mail import EmailMultiAlternatives
 
-    def haversine(lat1, lon1, lat2, lon2):
-        R = 6371.0
-        dlat = math.radians(lat2 - lat1)
-        dlon = math.radians(lon2 - lon1)
-        a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-        return R * c
+    for contact in trusted_contacts:
+        if not contact.email:
+            print(f"No email for trusted contact {contact.contact_name} — skipped safe notification")
+            continue
 
-    station_name = "District Central Police Station & Women Protection Cell"
-    station_type = "Women Police Station & Helpline"
-    station_phone = "1091 / 112"
-    station_email = getattr(settings, "EMAIL_HOST_USER", "controlroom@police.gov.in")
-    distance_km = 1.2
+        sender_desc = _relationship_message(contact.relationship)
+        name_part = f" ({user_name})" if user_name else ""
+        subject = f"✅ SAFE CONFIRMATION — {sender_desc}{name_part} is Safe!"
 
-    try:
-        if lat_str and lon_str:
-            lat = float(lat_str)
-            lon = float(lon_str)
-
-            # Query OpenStreetMap Nominatim for nearest police or women center
-            url = f"https://nominatim.openstreetmap.org/search?q=police+station&format=json&lat={lat}&lon={lon}&addressdetails=1&limit=3"
-            headers = {"User-Agent": "SafeHer-WomenSafetyApp/1.0"}
-            res = requests.get(url, headers=headers, timeout=4)
-            if res.status_code == 200:
-                places = res.json()
-                if places and len(places) > 0:
-                    best = places[0]
-                    p_lat = float(best.get("lat", lat))
-                    p_lon = float(best.get("lon", lon))
-                    dist = haversine(lat, lon, p_lat, p_lon)
-
-                    raw_name = best.get("display_name", "").split(",")[0] or "City Police Station"
-                    station_name = f"👮 {raw_name}"
-                    station_type = "Police Station & Emergency Response Unit"
-                    distance_km = max(0.3, round(dist, 2))
-    except Exception as err:
-        print("Spatial station lookup fallback used:", err)
-
-    # Dispatch Urgent Emergency Alert Email to Nearest Police / Safety Center
-    maps_link = f"https://www.google.com/maps?q={lat_str},{lon_str}" if (lat_str and lon_str) else ""
-    subject = f"🚨 URGENT POLICE DISPATCH ALERT — Victim SOS from SafeHer ({user_name or 'Citizen'})"
-    
-    plain_text = (
-        f"URGENT POLICE DISPATCH & WOMEN PROTECTION ALERT\n\n"
-        f"Victim Name: {user_name or 'Anonymous User'}\n"
-        f"Phone: {user_phone or 'N/A'}\n"
-        f"Location: {location_address or 'GPS Alert'}\n"
-        f"Coordinates: {lat_str}, {lon_str}\n"
-        f"Maps Link: {maps_link}\n"
-        f"Assigned Facility: {station_name} ({distance_km} km away)\n\n"
-        f"Please dispatch nearest mobile patrol immediately."
-    )
-
-    html_content = f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden;border:3px solid #d32f2f;">
-      <div style="background:#d32f2f;padding:24px;text-align:center;">
-        <h1 style="color:white;margin:0;font-size:24px;">🚨 POLICE DISPATCH & WOMEN SAFETY ALERT</h1>
-        <p style="color:#ffcdd2;margin:6px 0 0;font-weight:bold;">IMMEDIATE PATROL DISPATCH REQUESTED</p>
-      </div>
-      <div style="padding:28px;">
-        <div style="background:#ffebee;border-left:5px solid #d32f2f;padding:16px;border-radius:8px;margin-bottom:20px;">
-          <p style="margin:0;font-size:16px;color:#b71c1c;font-weight:bold;">
-            A woman in distress has triggered an SOS alert near <strong>{station_name}</strong> ({distance_km} km away).
-          </p>
-        </div>
-        <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-          <tr><td style="padding:8px 0;color:#666;">Victim Name:</td><td style="padding:8px 0;font-weight:bold;color:#111;">{user_name or 'Anonymous User'}</td></tr>
-          <tr><td style="padding:8px 0;color:#666;">Victim Phone:</td><td style="padding:8px 0;font-weight:bold;color:#111;">{user_phone or 'N/A'}</td></tr>
-          <tr><td style="padding:8px 0;color:#666;">Address:</td><td style="padding:8px 0;font-weight:bold;color:#111;">{location_address or 'GPS Alert'}</td></tr>
-          <tr><td style="padding:8px 0;color:#666;">GPS Coordinates:</td><td style="padding:8px 0;font-weight:bold;color:#d32f2f;">{lat_str}, {lon_str}</td></tr>
-        </table>
-        {f'<div style="text-align:center;margin:24px 0;"><a href="{maps_link}" target="_blank" style="background:#d32f2f;color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;font-size:16px;display:inline-block;">🗺 Open Google Maps Navigation</a></div>' if maps_link else ''}
-        <div style="background:#f5f5f5;padding:14px;border-radius:8px;text-align:center;font-size:13px;color:#555;">
-          Automatic Emergency Dispatch by SafeHer Safety System
-        </div>
-      </div>
-    </div>
-    """
-
-    try:
-        msg = EmailMultiAlternatives(
-            subject=subject,
-            body=plain_text,
-            from_email=settings.EMAIL_HOST_USER,
-            to=[station_email],
+        plain_text = (
+            f"Dear {contact.contact_name},\n\n"
+            f"✅ SAFE CONFIRMATION\n\n"
+            f"{sender_desc}{name_part} has marked themselves as SAFE and the emergency session has been resolved.\n\n"
+            f"⏱ Emergency Duration: {duration_str}\n"
+            f"📍 Last Known Location:\n{location or 'Location not specified'}\n\n"
+            f"Thank you for keeping watch over them!\n\n— SafeHer Safety App"
         )
-        msg.attach_alternative(html_content, "text/html")
-        msg.send(fail_silently=True)
-        print(f"Emergency dispatch email sent to nearest station: {station_name} <{station_email}>")
-    except Exception as e:
-        print("Station alert email error:", e)
 
-    return {
-        "name": station_name,
-        "type": station_type,
-        "phone": station_phone,
-        "email": station_email,
-        "distance_km": distance_km,
-    }
+        html_content = f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);">
+          <div style="background:#10b981;padding:24px;text-align:center;">
+            <h1 style="color:white;margin:0;font-size:26px;">✅ USER IS SAFE NOW</h1>
+          </div>
+          <div style="padding:28px;">
+            <p style="font-size:16px;color:#333;">Dear <strong>{contact.contact_name}</strong>,</p>
+            <div style="background:#ecfdf5;border-left:4px solid #10b981;padding:16px;border-radius:8px;margin:16px 0;">
+              <p style="margin:0;font-size:17px;color:#047857;font-weight:bold;">
+                {sender_desc}{name_part} has marked themselves as SAFE!
+              </p>
+            </div>
+            <div style="background:#f8fafc;border-radius:8px;padding:16px;margin:16px 0;">
+              <p style="margin:0 0 6px;font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:1px;">⏱ Emergency Duration</p>
+              <p style="margin:0;font-size:16px;color:#1e293b;font-weight:bold;">{duration_str}</p>
+            </div>
+            <div style="background:#f8fafc;border-radius:8px;padding:16px;margin:16px 0;">
+              <p style="margin:0 0 6px;font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:1px;">📍 Last Known Location</p>
+              <p style="margin:0;font-size:15px;color:#333;font-weight:600;">{location or 'Location not specified'}</p>
+            </div>
+            <p style="color:#64748b;font-size:14px;text-align:center;margin-top:20px;">
+              Live emergency tracking and media recording have ended.
+            </p>
+            <p style="color:#94a3b8;font-size:12px;text-align:center;margin-top:24px;">Sent by SafeHer Safety App</p>
+          </div>
+        </div>
+        """
 
+        try:
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=plain_text,
+                from_email=settings.EMAIL_HOST_USER,
+                to=[contact.email],
+            )
+            msg.attach_alternative(html_content, "text/html")
+            msg.send(fail_silently=True)
+            print(f"Safe email sent to {contact.contact_name} <{contact.email}>")
+        except Exception as e:
+            print(f"Safe email error for {contact.contact_name}: {e}")
 
 
 def add_trusted_contact(request):
+
     if request.method == "POST":
         contact_id = request.POST.get("contact_id")
         contact = get_object_or_404(EmergencyContact, id=contact_id)

@@ -441,23 +441,6 @@ function SOS() {
               <strong>📍 Last Saved Address:</strong> {locationName}
             </div>
 
-            {/* Notified Police Station & Women Safety Center */}
-            <div style={{ background: "#fef2f2", border: "2px solid #f87171", padding: "16px", borderRadius: "14px", margin: "16px 0", textAlign: "left" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#dc2626", fontWeight: "700", fontSize: "16px", marginBottom: "8px" }}>
-                <span>👮 Police Station & Women Safety Center Alerted</span>
-              </div>
-              <div style={{ fontSize: "15px", color: "#1f2937", fontWeight: "600" }}>
-                {activeSession.nearest_station_name || "District Central Police Station & Women Protection Cell"}
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px", marginTop: "10px", fontSize: "13px", color: "#4b5563" }}>
-                <div><strong>Distance:</strong> {activeSession.nearest_station_distance_km || 1.2} km away</div>
-                <div><strong>Helpline Phone:</strong> {activeSession.nearest_station_phone || "1091 / 112"}</div>
-                <div><strong>Dispatch Email:</strong> {activeSession.nearest_station_email || "controlroom@police.gov.in"}</div>
-                <div><strong>Status:</strong> <span style={{ color: "#16a34a", fontWeight: "700" }}>✓ Emergency Alert Dispatched</span></div>
-              </div>
-            </div>
-
-
             {/* 7. "I'm Safe" Button */}
             <button type="button" className="btn-im-safe" onClick={handleImSafe} disabled={loading}>
               <span>🛡️</span>

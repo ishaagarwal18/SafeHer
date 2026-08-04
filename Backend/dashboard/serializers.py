@@ -77,13 +77,7 @@ class SOSSessionSerializer(serializers.ModelSerializer):
             "initial_longitude",
             "initial_location",
             "last_known_location",
-            "nearest_station_name",
-            "nearest_station_type",
-            "nearest_station_phone",
-            "nearest_station_email",
-            "nearest_station_distance_km",
             "location_updates",
-
             "photos",
             "audios",
             "videos",

@@ -239,20 +239,6 @@ function SOSHistory() {
                 </div>
               </div>
 
-              {/* Notified Station */}
-              <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", padding: "12px", borderRadius: "10px", marginBottom: "16px" }}>
-                <div style={{ fontWeight: "700", color: "#dc2626", fontSize: "13px" }}>
-                  👮 Notified Emergency Facility:
-                </div>
-                <div style={{ fontSize: "14px", fontWeight: "600", color: "#111827", marginTop: "2px" }}>
-                  {selectedSession.nearest_station_name || "District Central Police Station & Women Protection Cell"}
-                </div>
-                <div style={{ fontSize: "12px", color: "#4b5563", marginTop: "4px" }}>
-                  Distance: {selectedSession.nearest_station_distance_km || 1.2} km • Helpline: {selectedSession.nearest_station_phone || "1091 / 112"}
-                </div>
-              </div>
-
-
               {/* Photos */}
               <h4 style={{ color: "#ff4f81", marginTop: "16px", marginBottom: "8px" }}>
                 📷 Photos ({selectedSession.photos?.length || 0})
