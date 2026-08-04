@@ -45,6 +45,24 @@ function Journey() {
         setSelectedContacts(trusted.map((contact) => contact.id));
       })
       .catch(() => setContacts([]));
+
+    // Handle URL checkin parameters from Email clicks (e.g. ?checkin=123&status=safe or status=not_safe)
+    const urlParams = new URLSearchParams(window.location.search);
+    const checkinId = urlParams.get("checkin");
+    const checkinStatus = urlParams.get("status");
+
+    if (checkinId && checkinStatus) {
+      dashboardApi
+        .post(`api/journey/${checkinId}/check-in/`, { response: checkinStatus })
+        .then((res) => {
+          setNoticeMsg(res.data?.message || `Safety status recorded: ${checkinStatus}`);
+          fetchJourneys();
+        })
+        .catch(() => setError("Could not record safety status from email link."));
+
+      // Clean up URL params
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, []);
 
   const fetchJourneys = () => {

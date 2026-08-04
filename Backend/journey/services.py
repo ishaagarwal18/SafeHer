@@ -19,31 +19,66 @@ def _send_email(subject, plain_text, html_content, recipients):
     return len(recipients)
 
 
-def send_safety_check_email(journey, check_number):
-    """Ask the traveller to confirm they are safe during their journey."""
+def send_safety_check_email(journey):
+    """Send an HTML safety check-in email to the user asking 'Are you safe or not?' with direct interactive links."""
     if not journey.user or not journey.user.email:
         return 0
 
     app_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
-    subject = f"SafeHer check-in: Are you safe?"
+    user_name = journey.user.name if (journey.user and journey.user.name) else "Traveller"
+
+    # Interactive action links
+    safe_action_url = f"{app_url}/journey?checkin={journey.id}&status=safe"
+    not_safe_action_url = f"{app_url}/journey?checkin={journey.id}&status=not_safe"
+
+    subject = f"🛡️ SafeHer Safety Check: Are you safe?"
+
     plain = (
-        f"Hi {journey.user.name},\n\n"
-        f"Safety check for your journey from {journey.source} to {journey.destination}. "
-        "Please open SafeHer and confirm 'I am safe' or 'Not safe'.\n\n"
-        f"Open SafeHer: {app_url}/journey\n\n— SafeHer"
+        f"Hi {user_name},\n\n"
+        f"Periodic safety check for your active journey: {journey.source} → {journey.destination}.\n\n"
+        f"Are you safe?\n\n"
+        f"YES, I am safe: {safe_action_url}\n"
+        f"NO, I am NOT safe: {not_safe_action_url}\n\n"
+        f"— SafeHer Safety App"
     )
+
     html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#263246">
-      <div style="background:#ff4f81;color:#fff;padding:22px;border-radius:16px 16px 0 0">
-        <h1 style="margin:0;font-size:24px">Are you safe?</h1>
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);border:1px solid #f4dce5;">
+      <div style="background:#ff4f81;color:#fff;padding:22px;text-align:center;">
+        <h1 style="margin:0;font-size:24px;">🛡️ SafeHer Safety Check</h1>
       </div>
-      <div style="padding:24px;border:1px solid #f4dce5;border-top:0;border-radius:0 0 16px 16px">
-        <p>Hi <strong>{journey.user.name}</strong>,</p>
-        <p>Safety check-in for your journey: <strong>{journey.source} → {journey.destination}</strong>.</p>
-        <p>Please confirm your safety status in SafeHer.</p>
-        <a href="{app_url}/journey" style="display:inline-block;background:#ff4f81;color:#fff;padding:12px 18px;border-radius:9px;text-decoration:none;font-weight:bold">Open SafeHer</a>
+      <div style="padding:26px;text-align:center;">
+        <p style="font-size:16px;color:#333;margin:0 0 12px;">Hi <strong>{user_name}</strong>,</p>
+        <p style="font-size:15px;color:#526074;margin:0 0 20px;">
+          Periodic safety check for your active journey:<br/>
+          <strong style="color:#1e293b;font-size:16px;">{journey.source} → {journey.destination}</strong>
+        </p>
+
+        <div style="background:#fff5f8;border-radius:12px;padding:20px;margin:20px 0;border:1px solid #ffe0ea;">
+          <h2 style="margin:0 0 16px;color:#e93870;font-size:20px;">Are you safe or not?</h2>
+
+          <div style="display:inline-block;margin:6px;">
+            <a href="{safe_action_url}" target="_blank"
+               style="display:inline-block;background:#10b981;color:white;padding:12px 24px;
+                      border-radius:8px;text-decoration:none;font-size:15px;font-weight:bold;">
+              ✅ I'm Safe
+            </a>
+          </div>
+          <div style="display:inline-block;margin:6px;">
+            <a href="{not_safe_action_url}" target="_blank"
+               style="display:inline-block;background:#dc2626;color:white;padding:12px 24px;
+                      border-radius:8px;text-decoration:none;font-size:15px;font-weight:bold;">
+              🚨 Not Safe
+            </a>
+          </div>
+        </div>
+
+        <p style="color:#94a3b8;font-size:12px;margin-top:20px;">
+          Clicking "Not Safe" will immediately send an emergency alert email to all your trusted contacts.
+        </p>
       </div>
-    </div>"""
+    </div>
+    """
     return _send_email(subject, plain, html, [journey.user.email])
 
 

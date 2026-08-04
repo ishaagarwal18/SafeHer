@@ -292,12 +292,19 @@ def journey_api(request):
         next_safety_check_at=next_check,
         safety_check_pending=False,
     )
+
+    # Send safety check-in email to user asking "Are you safe or not?"
+    try:
+        send_safety_check_email(journey)
+    except Exception as e:
+        print(f"Error sending safety check email: {e}")
+
     journey_data = _serialize_journey(journey)
     return Response({
         **journey_data,
         "journey": journey_data,
         "estimated_duration_minutes": duration,
-        "message": f"Journey started! Estimated duration: {duration} mins. Safety check scheduled every 10 mins.",
+        "message": f"Journey started! Estimated duration: {duration} mins. Safety check email sent to your inbox.",
     }, status=status.HTTP_201_CREATED)
 
 api_journeys = journey_api
