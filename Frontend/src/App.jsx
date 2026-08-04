@@ -11,6 +11,7 @@ import Contacts from "./pages/Contacts";
 import Journey from "./pages/Journey";
 import History from "./pages/History";
 import SOS from "./pages/SOS";
+import SOSHistory from "./pages/SOSHistory";
 import SafePlaces from "./pages/SafePlaces";
 import Report from "./pages/Report";
 import Profile from "./pages/Profile";
@@ -62,6 +63,14 @@ function App() {
           element={
             <ProtectedRoute>
               <SOS />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sos/history"
+          element={
+            <ProtectedRoute>
+              <SOSHistory />
             </ProtectedRoute>
           }
         />

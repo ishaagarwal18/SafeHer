@@ -314,3 +314,252 @@ def report_api(request):
     }, status=status.HTTP_201_CREATED)
 
 api_reports = report_api
+
+
+# ── Enhanced Production SOS APIs ─────────────────────────────────────────────
+
+from django.utils import timezone
+from django.db.models import Q
+from .models import SOSSession, SOSLocation, SOSPhoto, SOSAudio, SOSVideo
+from .serializers import (
+    SOSSessionSerializer,
+    SOSLocationSerializer,
+    SOSPhotoSerializer,
+    SOSAudioSerializer,
+    SOSVideoSerializer,
+)
+
+
+@api_view(["POST"])
+def sos_start_api(request):
+    """POST /api/sos/start/ — Starts a new SOS emergency session."""
+    user = _get_user(request)
+    if not user:
+        user = UserProfile.objects.first()
+
+    # Prevent duplicate active sessions
+    active_session = SOSSession.objects.filter(status="Active")
+    if user:
+        active_session = active_session.filter(user=user)
+
+    active_obj = active_session.first()
+    if active_obj:
+        serializer = SOSSessionSerializer(active_obj, context={"request": request})
+        return Response(
+            {
+                "message": "An active SOS session is already in progress.",
+                "session": serializer.data,
+                "is_new": False,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    lat = str(request.data.get("latitude", "") or "").strip()
+    lon = str(request.data.get("longitude", "") or "").strip()
+    location = request.data.get("location", "").strip() or "Emergency GPS Location Alert"
+
+    session = SOSSession.objects.create(
+        user=user,
+        status="Active",
+        initial_latitude=lat,
+        initial_longitude=lon,
+        initial_location=location,
+        last_known_location=location,
+    )
+
+    # Log initial location
+    if lat and lon:
+        SOSLocation.objects.create(
+            session=session,
+            latitude=lat,
+            longitude=lon,
+            accuracy=request.data.get("accuracy"),
+            location_name=location,
+        )
+
+    # Sync with legacy SOSAlert model for dashboard metrics
+    SOSAlert.objects.create(status="Sent", location=location, latitude=lat, longitude=lon)
+
+    # Notify trusted contacts via SMS
+    user_name = user.name if user else ""
+    trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True) if user else EmergencyContact.objects.filter(is_trusted=True)
+    _send_sos_sms(location, trusted_contacts, user_name, lat, lon)
+
+    serializer = SOSSessionSerializer(session, context={"request": request})
+    return Response(
+        {
+            "message": f"Emergency SOS activated! Notified {trusted_contacts.count()} contact(s).",
+            "session": serializer.data,
+            "is_new": True,
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(["POST"])
+def sos_location_api(request):
+    """POST /api/sos/location/ — 15-second continuous GPS location update."""
+    session_id = request.data.get("session_id")
+    lat = str(request.data.get("latitude", "") or "").strip()
+    lon = str(request.data.get("longitude", "") or "").strip()
+    accuracy = request.data.get("accuracy")
+    location_name = request.data.get("location_name", "").strip() or request.data.get("location", "").strip()
+
+    if not session_id or not lat or not lon:
+        return Response({"error": "session_id, latitude, and longitude are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        session = SOSSession.objects.get(id=session_id)
+    except SOSSession.DoesNotExist:
+        return Response({"error": "SOS session not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    location_obj = SOSLocation.objects.create(
+        session=session,
+        latitude=lat,
+        longitude=lon,
+        accuracy=accuracy if isinstance(accuracy, (int, float)) else None,
+        location_name=location_name or session.last_known_location,
+    )
+
+    if location_name:
+        session.last_known_location = location_name
+        session.save(update_fields=["last_known_location", "updated_at"])
+
+    serializer = SOSLocationSerializer(location_obj)
+    return Response({"message": "Location update saved.", "location": serializer.data}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+def sos_end_api(request):
+    """POST /api/sos/end/ — Ends active SOS session ("I'm Safe")."""
+    session_id = request.data.get("session_id")
+    if not session_id:
+        # Fallback to latest active session for user
+        user = _get_user(request)
+        active_qs = SOSSession.objects.filter(status="Active")
+        if user:
+            active_qs = active_qs.filter(user=user)
+        session = active_qs.first()
+    else:
+        try:
+            session = SOSSession.objects.get(id=session_id)
+        except SOSSession.DoesNotExist:
+            session = None
+
+    if not session:
+        return Response({"error": "No active SOS session found."}, status=status.HTTP_404_NOT_FOUND)
+
+    session.end_time = timezone.now()
+    if session.start_time:
+        diff = (session.end_time - session.start_time).total_seconds()
+        session.duration_seconds = max(0, int(diff))
+
+    session.status = "Resolved"
+    session.save()
+
+    serializer = SOSSessionSerializer(session, context={"request": request})
+    return Response({"message": "SOS session marked as Resolved. Stay safe! 💖", "session": serializer.data}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+def sos_history_api(request):
+    """GET /api/sos/history/ — Lists past SOS sessions with search, date filters, and pagination."""
+    user = _get_user(request)
+    queryset = SOSSession.objects.all()
+    if user:
+        queryset = queryset.filter(user=user)
+
+    # Search filter
+    q = request.query_params.get("q", "").strip()
+    if q:
+        queryset = queryset.filter(
+            Q(initial_location__icontains=q) |
+            Q(last_known_location__icontains=q) |
+            Q(status__icontains=q)
+        )
+
+    # Date range filters
+    start_date = request.query_params.get("start_date", "").strip()
+    end_date = request.query_params.get("end_date", "").strip()
+    if start_date:
+        queryset = queryset.filter(start_time__date__gte=start_date)
+    if end_date:
+        queryset = queryset.filter(start_time__date__lte=end_date)
+
+    # Pagination
+    page = int(request.query_params.get("page", 1))
+    page_size = int(request.query_params.get("page_size", 10))
+    total_count = queryset.count()
+
+    start_idx = (page - 1) * page_size
+    end_idx = start_idx + page_size
+    paginated_qs = queryset[start_idx:end_idx]
+
+    serializer = SOSSessionSerializer(paginated_qs, many=True, context={"request": request})
+    return Response({
+        "total": total_count,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total_count + page_size - 1) // page_size if page_size > 0 else 1,
+        "results": serializer.data,
+    })
+
+
+@api_view(["POST"])
+def sos_upload_photo_api(request):
+    """POST /api/sos/upload-photo/ — Upload photo for SOS session."""
+    session_id = request.data.get("session_id")
+    image_file = request.FILES.get("image") or request.FILES.get("file") or request.FILES.get("photo")
+
+    if not session_id or not image_file:
+        return Response({"error": "session_id and image file are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        session = SOSSession.objects.get(id=session_id)
+    except SOSSession.DoesNotExist:
+        return Response({"error": "SOS session not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    photo = SOSPhoto.objects.create(session=session, image=image_file)
+    serializer = SOSPhotoSerializer(photo, context={"request": request})
+    return Response({"message": "Photo uploaded successfully.", "photo": serializer.data}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+def sos_upload_audio_api(request):
+    """POST /api/sos/upload-audio/ — Upload audio recording for SOS session."""
+    session_id = request.data.get("session_id")
+    audio_file = request.FILES.get("audio_file") or request.FILES.get("audio") or request.FILES.get("file")
+    duration = int(request.data.get("duration", 0) or request.data.get("duration_seconds", 0) or 0)
+
+    if not session_id or not audio_file:
+        return Response({"error": "session_id and audio file are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        session = SOSSession.objects.get(id=session_id)
+    except SOSSession.DoesNotExist:
+        return Response({"error": "SOS session not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    audio = SOSAudio.objects.create(session=session, audio_file=audio_file, duration_seconds=duration)
+    serializer = SOSAudioSerializer(audio, context={"request": request})
+    return Response({"message": "Audio recording uploaded successfully.", "audio": serializer.data}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+def sos_upload_video_api(request):
+    """POST /api/sos/upload-video/ — Upload video recording for SOS session."""
+    session_id = request.data.get("session_id")
+    video_file = request.FILES.get("video_file") or request.FILES.get("video") or request.FILES.get("file")
+    duration = int(request.data.get("duration", 0) or request.data.get("duration_seconds", 0) or 0)
+
+    if not session_id or not video_file:
+        return Response({"error": "session_id and video file are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        session = SOSSession.objects.get(id=session_id)
+    except SOSSession.DoesNotExist:
+        return Response({"error": "SOS session not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    video = SOSVideo.objects.create(session=session, video_file=video_file, duration_seconds=duration)
+    serializer = SOSVideoSerializer(video, context={"request": request})
+    return Response({"message": "Video recording uploaded successfully.", "video": serializer.data}, status=status.HTTP_201_CREATED)
+

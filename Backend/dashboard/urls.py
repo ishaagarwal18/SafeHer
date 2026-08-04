@@ -24,6 +24,13 @@ from .api_views import (
     sos_api,
     api_reports,
     report_api,
+    sos_start_api,
+    sos_location_api,
+    sos_end_api,
+    sos_history_api,
+    sos_upload_photo_api,
+    sos_upload_audio_api,
+    sos_upload_video_api,
 )
 
 urlpatterns = [
@@ -49,4 +56,13 @@ urlpatterns = [
     path("api/sos/", sos_api, name="sos-api"),
     path("api/reports/", api_reports, name="reports-api"),
     path("api/report/", report_api, name="report-api"),
+
+    # Enhanced Production SOS APIs
+    path("api/sos/start/", sos_start_api, name="sos-start-api"),
+    path("api/sos/location/", sos_location_api, name="sos-location-api"),
+    path("api/sos/end/", sos_end_api, name="sos-end-api"),
+    path("api/sos/history/", sos_history_api, name="sos-history-api"),
+    path("api/sos/upload-photo/", sos_upload_photo_api, name="sos-upload-photo-api"),
+    path("api/sos/upload-audio/", sos_upload_audio_api, name="sos-upload-audio-api"),
+    path("api/sos/upload-video/", sos_upload_video_api, name="sos-upload-video-api"),
 ]
