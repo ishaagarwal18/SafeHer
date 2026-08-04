@@ -58,12 +58,13 @@ body { font-family: Poppins, "Segoe UI", sans-serif; color: var(--ink); }
 }
 .location-fields input:focus { border-color: var(--pink); box-shadow: 0 0 0 3px #ff4f8120; }
 .input-with-action { position: relative; }
-.input-with-action input { padding-right: 135px; }
-.input-with-action button {
-  position: absolute; top: 7px; right: 7px; border: 0;
+.input-with-action input { padding-right: 75px; }
+.btn-locate-small {
+  position: absolute; top: 8px; right: 8px; border: 0;
   background: #fff0f5; color: var(--pink-dark); border-radius: 8px;
-  padding: 7px 9px; font-size: 11px; font-weight: 700; cursor: pointer;
+  padding: 5px 8px; font-size: 11px; font-weight: 700; cursor: pointer; line-height: 1.2;
 }
+.btn-locate-small:hover { background: #ffe4ee; }
 .route-line { height: 18px; border-left: 2px dashed #ff9ab7; margin: 4px 0 4px 9px; }
 
 /* Transport */
@@ -77,18 +78,6 @@ body { font-family: Poppins, "Segoe UI", sans-serif; color: var(--ink); }
 }
 .transport-option span { display: block; font-size: 20px; margin-bottom: 3px; }
 .transport-option.selected { border-color: var(--pink); background: #fff2f6; color: var(--pink-dark); }
-
-/* ETA */
-.trip-estimate {
-  display: flex; align-items: center; gap: 8px; padding: 9px 10px 9px 13px;
-  border-radius: 11px; color: #55637a; background: #f8fafc; font-size: 13px;
-}
-.trip-estimate span { flex: 1; }
-.trip-estimate button {
-  border: 0; background: #ffe7ef; color: var(--pink-dark); font: inherit;
-  font-size: 11px; font-weight: 800; padding: 7px 9px; border-radius: 8px; cursor: pointer;
-}
-.trip-estimate button:disabled { opacity: .65; cursor: wait; }
 
 .form-error { color: #c22952; font-size: 13px; margin: 12px 0 0; }
 
@@ -111,11 +100,11 @@ body { font-family: Poppins, "Segoe UI", sans-serif; color: var(--ink); }
 /* Safety sidebar */
 .switch-row {
   display: flex; justify-content: space-between; align-items: center; gap: 10px;
-  border-bottom: 1px solid #f5edf0; padding: 20px 0; cursor: pointer;
+  border-bottom: 1px solid #f5edf0; padding: 14px 0; cursor: pointer;
 }
 .switch-row > span { display: flex; align-items: center; gap: 10px; }
 .switch-row strong { display: block; font-size: 13px; }
-.switch-row small { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
+.switch-row small { display: block; color: var(--muted); font-size: 11px; margin-top: 1px; }
 .switch-row input[type=checkbox] { display: none; }
 .switch-row i {
   position: relative; width: 42px; height: 23px; border-radius: 20px;
@@ -128,21 +117,25 @@ body { font-family: Poppins, "Segoe UI", sans-serif; color: var(--ink); }
 .switch-row input:checked + i { background: #31b67a; }
 .switch-row input:checked + i::after { left: 22px; }
 
-.contact-section { padding: 20px 0; }
+.contact-section { padding: 12px 0; }
 .contact-section__heading {
   display: flex; justify-content: space-between; color: #536174;
-  font-size: 13px; font-weight: 700; margin-bottom: 11px;
+  font-size: 13px; font-weight: 700; margin-bottom: 8px;
 }
 .contact-section__heading span { display: flex; gap: 7px; align-items: center; }
 .contact-section__heading small { color: var(--pink-dark); }
-.contact-choice { display: flex; align-items: center; gap: 9px; padding: 8px 0; cursor: pointer; }
-.contact-choice input { accent-color: var(--pink); }
+.contact-choice {
+  display: flex; align-items: center; gap: 8px; padding: 4px 6px;
+  border-radius: 8px; margin-bottom: 2px; cursor: pointer; transition: background .15s;
+}
+.contact-choice:hover { background: #fff0f5; }
+.contact-choice input { margin: 0; width: 15px; height: 15px; accent-color: var(--pink); cursor: pointer; flex-shrink: 0; }
 .contact-avatar {
-  width: 30px; height: 30px; display: grid; place-items: center;
-  border-radius: 50%; background: #ffe7ef; color: var(--pink-dark); font-size: 12px; font-weight: 800;
+  width: 26px; height: 26px; display: grid; place-items: center;
+  border-radius: 50%; background: #ffe7ef; color: var(--pink-dark); font-size: 11px; font-weight: 800; flex-shrink: 0;
 }
 .contact-choice strong { display: block; font-size: 13px; }
-.contact-choice small { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
+.contact-choice small { display: block; color: var(--muted); font-size: 11px; margin-top: 1px; }
 .empty-contacts { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; line-height: 1.5; color: var(--muted); }
 .safety-note {
   display: flex; gap: 7px; margin: 0; padding: 10px; border-radius: 10px;

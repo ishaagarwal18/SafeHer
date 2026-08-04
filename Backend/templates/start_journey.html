@@ -16,7 +16,7 @@
     <span class="checkin-icon">🛡️</span>
     <p class="eyebrow">SAFEHER CHECK-IN</p>
     <h2 id="checkinTitle">Are you safe?</h2>
-    <p>Your expected arrival time for <strong id="checkinDestination"></strong> has passed. Tell us what is happening.</p>
+    <p>Safety check for journey to <strong id="checkinDestination"></strong>. Tell us what is happening.</p>
     <div class="checkin-actions">
       <button class="checkin-safe" id="btnSafe">I'm safe — end journey</button>
       <button class="checkin-later" id="btnStillTravelling">I'm still travelling</button>
@@ -36,6 +36,8 @@
         <p>Share your journey plan with people you trust.</p>
       </div>
     </header>
+
+    <div id="noticeBanner" hidden style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;border-radius:12px;padding:14px 18px;margin-bottom:20px;font-weight:600;font-size:14px;"></div>
 
     <section class="journey-layout">
 
@@ -58,8 +60,8 @@
           <label>
             <span>📍 Starting point</span>
             <div class="input-with-action">
-              <input id="source" name="source" placeholder="Enter source" required />
-              <button type="button" id="btnLocate">Use my location</button>
+              <input id="source" name="source" placeholder="Enter starting location manually" required />
+              <button type="button" id="btnLocate" class="btn-locate-small" title="Use GPS location">📍 GPS</button>
             </div>
           </label>
           <div class="route-line" aria-hidden="true"></div>
@@ -88,12 +90,6 @@
           </div>
         </fieldset>
         <input type="hidden" id="transport" name="transport" value="Car" />
-
-        <!-- ETA estimate -->
-        <div class="trip-estimate">
-          🕐 <span id="estimateText">Add locations to get a live Google Maps ETA</span>
-          <button type="button" id="btnETA">Get live ETA</button>
-        </div>
 
         <p class="form-error" id="formError" hidden></p>
 
@@ -140,13 +136,13 @@
     <!-- Recent journeys -->
     <section class="recent-journeys">
       <div class="section-title">
-        <div><h2>Recent journeys</h2><p>Your latest safety plans at a glance.</p></div>
+        <div><h2>Recent journeys</h2><p>Your latest 5 safety plans at a glance.</p></div>
         <a href="/dashboard/history/">View all history</a>
       </div>
       <div class="journey-table-wrap">
         <table>
           <thead>
-            <tr><th>Route</th><th>Transport</th><th>Started</th><th>Status</th><th></th></tr>
+            <tr><th>Route</th><th>Transport</th><th>Started</th><th>Status</th><th>Actions</th></tr>
           </thead>
           <tbody id="journeyTableBody">
             <tr><td colspan="5">
@@ -180,7 +176,6 @@ const api = async (method, url, body) => {
 let transport = 'Car';
 let selectedContacts = [];
 let allContacts = [];
-let routeEstimate = null;
 let unsafeWarning = '';
 let checkInJourney = null;
 
@@ -188,18 +183,23 @@ let checkInJourney = null;
 const sourceEl = document.getElementById('source');
 const destEl = document.getElementById('destination');
 const transportHidden = document.getElementById('transport');
-const estimateText = document.getElementById('estimateText');
 const formError = document.getElementById('formError');
 const unsafeWarn = document.getElementById('unsafeWarning');
 const unsafeMsg = document.getElementById('unsafeMsg');
 const btnStart = document.getElementById('btnStart');
-const btnETA = document.getElementById('btnETA');
 const contactList = document.getElementById('contactList');
 const selectedCount = document.getElementById('selectedCount');
 const safetyNote = document.getElementById('safetyNote');
 const shareLocation = document.getElementById('shareLocation');
 const tbodyEl = document.getElementById('journeyTableBody');
 const checkinOverlay = document.getElementById('checkinOverlay');
+const noticeBanner = document.getElementById('noticeBanner');
+
+function showNotice(msg) {
+  noticeBanner.textContent = msg;
+  noticeBanner.hidden = false;
+  setTimeout(() => { noticeBanner.hidden = true; }, 5000);
+}
 
 // --- Transport picker ---
 document.getElementById('transportOptions').addEventListener('click', e => {
@@ -209,8 +209,6 @@ document.getElementById('transportOptions').addEventListener('click', e => {
   btn.classList.add('selected');
   transport = btn.dataset.value;
   transportHidden.value = transport;
-  routeEstimate = null;
-  updateEstimate();
 });
 
 // --- Locate ---
@@ -218,33 +216,12 @@ document.getElementById('btnLocate').addEventListener('click', () => {
   if (!navigator.geolocation) return showError('Location services not supported.');
   navigator.geolocation.getCurrentPosition(
     ({ coords }) => { sourceEl.value = `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`; resetWarnings(); },
-    () => showError('Could not access your location. Please enter it manually.')
+    () => showError('Could not access your GPS location. Please enter it manually.')
   );
 });
 
 // --- Input change ---
-[sourceEl, destEl].forEach(el => el.addEventListener('input', () => { routeEstimate = null; unsafeWarning = ''; unsafeWarn.hidden = true; updateEstimate(); }));
-
-// --- ETA ---
-btnETA.addEventListener('click', async () => {
-  if (!sourceEl.value || !destEl.value) return showError('Add both locations before requesting an ETA.');
-  hideError();
-  btnETA.disabled = true; btnETA.textContent = 'Checking…';
-  try {
-    const data = await api('POST', '/dashboard/api/journey/estimate/', { source: sourceEl.value, destination: destEl.value, transport });
-    routeEstimate = data;
-    updateEstimate();
-  } catch {
-    routeEstimate = { available: false, message: 'Could not get ETA. Please try again.' };
-    updateEstimate();
-  } finally { btnETA.disabled = false; btnETA.textContent = 'Get live ETA'; }
-});
-
-function updateEstimate() {
-  if (routeEstimate?.available) { estimateText.textContent = routeEstimate.message; return; }
-  if (!sourceEl.value || !destEl.value) { estimateText.textContent = 'Add locations to get a live Google Maps ETA'; return; }
-  estimateText.textContent = routeEstimate?.message || 'Get a live Google Maps ETA before you start';
-}
+[sourceEl, destEl].forEach(el => el.addEventListener('input', () => { unsafeWarning = ''; unsafeWarn.hidden = true; }));
 
 // --- Submit ---
 document.getElementById('journeyForm').addEventListener('submit', async e => {
@@ -263,10 +240,9 @@ document.getElementById('journeyForm').addEventListener('submit', async e => {
     }
     const journey = data.journey || data;
     prependJourneyRow(journey);
-    openGoogleMaps(payload.source, payload.destination, transport);
-    sourceEl.value = ''; destEl.value = ''; routeEstimate = null; unsafeWarning = '';
+    sourceEl.value = ''; destEl.value = ''; unsafeWarning = '';
     unsafeWarn.hidden = true; btnStart.textContent = 'Start safe journey 🧭';
-    updateEstimate();
+    showNotice('🚀 Journey started! Trusted contacts have been notified.');
   } catch (err) {
     showError(err?.message || 'Could not start the journey. Please try again.');
   } finally { btnStart.disabled = false; }
@@ -311,7 +287,7 @@ shareLocation.addEventListener('change', () => {
     : '🔇 Location sharing is currently off.';
 });
 
-// --- Journeys table ---
+// --- Journeys table (display only last 5) ---
 async function loadJourneys() {
   try {
     const data = await api('GET', '/dashboard/api/journey/');
@@ -334,7 +310,7 @@ function journeyRow(j) {
     <td><span class="journey-status ${cls}">${j.status || 'Active'}</span></td>
     <td><div class="journey-actions">
       <button type="button" class="map-button" data-src="${j.source}" data-dst="${j.destination}" data-trn="${j.transport_mode || j.transport || 'Car'}">🧭 Map</button>
-      ${isActive ? `<button type="button" class="complete-button" data-journey-id="${j.id}">✅ I'm safe</button>` : ''}
+      ${isActive ? `<button type="button" class="complete-button" data-notice-id="${j.id}">✅ I'm safe</button>` : ''}
     </div></td>
   </tr>`;
 }
@@ -342,6 +318,9 @@ function journeyRow(j) {
 function prependJourneyRow(j) {
   if (tbodyEl.querySelector('.empty-journeys')) tbodyEl.innerHTML = '';
   tbodyEl.insertAdjacentHTML('afterbegin', journeyRow(j));
+  // Keep maximum 5 rows visible
+  const rows = tbodyEl.querySelectorAll('tr');
+  if (rows.length > 5) rows[rows.length - 1].remove();
   attachRowListeners();
 }
 
@@ -349,19 +328,17 @@ function attachRowListeners() {
   tbodyEl.querySelectorAll('.map-button').forEach(btn => {
     btn.addEventListener('click', () => openGoogleMaps(btn.dataset.src, btn.dataset.dst, btn.dataset.trn));
   });
-  tbodyEl.querySelectorAll('.complete-button').forEach(btn => {
-    btn.addEventListener('click', () => markCompleted(parseInt(btn.dataset.journeyId)));
+  tbodyEl.querySelectorAll('.complete-button[data-notice-id]').forEach(btn => {
+    btn.addEventListener('click', () => sendSafeNotice(parseInt(btn.dataset.noticeId)));
   });
 }
 
-async function markCompleted(id) {
+// Send safety notice without marking journey as completed
+async function sendSafeNotice(id) {
   try {
-    const data = await api('POST', `/dashboard/api/journey/${id}/complete/`);
-    const updated = data.journey;
-    const row = tbodyEl.querySelector(`tr[data-id="${id}"]`);
-    if (row) { row.outerHTML = journeyRow(updated); attachRowListeners(); }
-    if (checkInJourney?.id === id) { checkinOverlay.hidden = true; checkInJourney = null; }
-  } catch { showError('Could not complete this journey. Please try again.'); }
+    const data = await api('POST', `/dashboard/api/journey/${id}/check-in/`, { response: 'safe_notice' });
+    showNotice(data.message || '🛡️ Safety notice sent: Trusted contacts notified that you are safe!');
+  } catch { showError('Could not send safety check-in alert. Please try again.'); }
 }
 
 // --- Safety check-in ---

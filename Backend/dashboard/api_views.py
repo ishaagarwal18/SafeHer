@@ -330,7 +330,7 @@ def journey_complete_api(request, journey_id):
 
 @api_view(["POST"])
 def journey_check_in_api(request, journey_id):
-    """Record an answer to the ETA safety prompt."""
+    """Record an answer to safety check or send a safety check-in notice."""
     user = _journey_user(request)
     journeys = Journey.objects.filter(id=journey_id, status="Active")
     if user:
@@ -339,7 +339,24 @@ def journey_check_in_api(request, journey_id):
     if not journey:
         return Response({"error": "Active journey not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    if request.data.get("response", "safe") == "safe":
+    resp_type = request.data.get("response", "safe_notice")
+
+    if resp_type == "safe_notice":
+        journey.last_safety_check_at = timezone.now()
+        journey.missed_check_count = 0
+        journey.save(update_fields=["last_safety_check_at", "missed_check_count"])
+
+        try:
+            trusted = EmergencyContact.objects.filter(user=user, is_trusted=True) if user else EmergencyContact.objects.filter(is_trusted=True)
+            send_safety_check_email(journey, list(trusted))
+        except Exception as e:
+            print(f"Error sending safety check-in email: {e}")
+
+        return Response({
+            "message": "Safety notice sent: Trusted contacts notified that you are safe! 🛡️",
+            "journey": _serialize_journey(journey)
+        })
+    elif resp_type == "safe":
         journey.status = "Completed"
         journey.completed_at = timezone.now()
         journey.next_safety_check_at = None
@@ -350,8 +367,10 @@ def journey_check_in_api(request, journey_id):
         journey.missed_check_count = 0
         journey.next_safety_check_at = timezone.now() + timedelta(minutes=getattr(settings, "SAFETY_CHECK_INTERVAL_MINUTES", 10))
         message = "Check-in recorded. We will ask again if your journey continues."
+
     journey.save()
     return Response({"message": message, "journey": _serialize_journey(journey)})
+
 
 
 # ── SOS ───────────────────────────────────────────────────────────────────────
