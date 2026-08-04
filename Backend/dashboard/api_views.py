@@ -252,7 +252,7 @@ def journey_api(request):
 
     source = request.data.get("source", "").strip()
     destination = request.data.get("destination", "").strip()
-    transport = request.data.get("transport", "").strip() or request.data.get("transport_mode", "").strip()
+    transport = request.data.get("transport", "").strip() or request.data.get("transport_mode", "").strip() or "Car"
     force = request.data.get("force", False)
 
     if not all([source, destination, transport]):
@@ -272,9 +272,16 @@ def journey_api(request):
                     status=status.HTTP_200_OK,
                 )
 
+    # Estimate journey duration (default e.g. Car: 30 min, Bus: 45 min, Train: 40 min, Walk: 25 min)
+    duration_mapping = {"Car": 30, "Bus": 45, "Train": 40, "Walking": 25}
     route_estimate = _google_route_estimate(source, destination, transport)
-    duration = route_estimate.get("duration_minutes")
-    estimated_arrival = timezone.now() + timedelta(minutes=duration) if duration else None
+    duration = route_estimate.get("duration_minutes") or duration_mapping.get(transport, 30)
+
+    now = timezone.now()
+    estimated_arrival = now + timedelta(minutes=duration)
+    # Next periodic safety check in 10 minutes
+    next_check = now + timedelta(minutes=10)
+
     journey = Journey.objects.create(
         user=user,
         source=source,
@@ -282,10 +289,16 @@ def journey_api(request):
         transport_mode=transport,
         expected_duration_minutes=duration,
         estimated_arrival_at=estimated_arrival,
-        next_safety_check_at=estimated_arrival,
+        next_safety_check_at=next_check,
+        safety_check_pending=False,
     )
     journey_data = _serialize_journey(journey)
-    return Response({**journey_data, "journey": journey_data, "route_estimate": route_estimate}, status=status.HTTP_201_CREATED)
+    return Response({
+        **journey_data,
+        "journey": journey_data,
+        "estimated_duration_minutes": duration,
+        "message": f"Journey started! Estimated duration: {duration} mins. Safety check scheduled every 10 mins.",
+    }, status=status.HTTP_201_CREATED)
 
 api_journeys = journey_api
 
@@ -330,46 +343,84 @@ def journey_complete_api(request, journey_id):
 
 @api_view(["POST"])
 def journey_check_in_api(request, journey_id):
-    """Record an answer to safety check or send a safety check-in notice."""
+    """Record safety check response (safe, not_safe, or missed)."""
+    from journey.services import send_not_safe_alert_email, send_trusted_contact_escalation
+
     user = _journey_user(request)
-    journeys = Journey.objects.filter(id=journey_id, status="Active")
+    journeys = Journey.objects.filter(id=journey_id).exclude(status="Completed")
     if user:
         journeys = journeys.filter(user=user)
     journey = journeys.first()
     if not journey:
         return Response({"error": "Active journey not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    resp_type = request.data.get("response", "safe_notice")
+    resp_type = request.data.get("response", "safe")
+    now = timezone.now()
 
-    if resp_type == "safe_notice":
-        journey.last_safety_check_at = timezone.now()
-        journey.missed_check_count = 0
-        journey.save(update_fields=["last_safety_check_at", "missed_check_count"])
+    if resp_type == "not_safe":
+        journey.status = "Unsafe Alert"
+        journey.safety_check_pending = False
+        journey.save(update_fields=["status", "safety_check_pending", "updated_at" if hasattr(journey, "updated_at") else "status"])
 
+        # Send URGENT NOT SAFE email to trusted contacts
         try:
-            trusted = EmergencyContact.objects.filter(user=user, is_trusted=True) if user else EmergencyContact.objects.filter(is_trusted=True)
-            send_safety_check_email(journey, list(trusted))
+            send_not_safe_alert_email(journey)
         except Exception as e:
-            print(f"Error sending safety check-in email: {e}")
+            print(f"Error sending NOT SAFE alert email: {e}")
+
+        # Record legacy SOS alert
+        SOSAlert.objects.create(
+            status="Sent",
+            location=f"Journey ALERT ({journey.source} -> {journey.destination})",
+        )
 
         return Response({
-            "message": "Safety notice sent: Trusted contacts notified that you are safe! 🛡️",
-            "journey": _serialize_journey(journey)
-        })
-    elif resp_type == "safe":
-        journey.status = "Completed"
-        journey.completed_at = timezone.now()
-        journey.next_safety_check_at = None
-        journey.safety_check_pending = False
-        message = "Thanks for checking in. Your journey is marked completed."
-    else:
-        journey.safety_check_pending = False
-        journey.missed_check_count = 0
-        journey.next_safety_check_at = timezone.now() + timedelta(minutes=getattr(settings, "SAFETY_CHECK_INTERVAL_MINUTES", 10))
-        message = "Check-in recorded. We will ask again if your journey continues."
+            "message": "🚨 URGENT: Emergency alert email sent to trusted contacts that you are NOT SAFE!",
+            "journey": _serialize_journey(journey),
+            "alert_triggered": True,
+        }, status=status.HTTP_200_OK)
 
-    journey.save()
-    return Response({"message": message, "journey": _serialize_journey(journey)})
+    elif resp_type == "missed":
+        journey.missed_check_count += 1
+        if journey.missed_check_count >= 2:
+            journey.status = "Escalated Alert"
+            journey.safety_check_pending = False
+            journey.escalated_at = now
+            journey.save()
+
+            try:
+                send_trusted_contact_escalation(journey)
+            except Exception as e:
+                print(f"Error sending escalation email: {e}")
+
+            return Response({
+                "message": "⚠️ 2 safety check-ins missed! Escalation email automatically sent to trusted contacts.",
+                "journey": _serialize_journey(journey),
+                "escalated": True,
+            })
+        else:
+            journey.next_safety_check_at = now + timedelta(minutes=10)
+            journey.safety_check_pending = False
+            journey.save()
+            return Response({
+                "message": f"Safety check-in missed ({journey.missed_check_count}/2).",
+                "journey": _serialize_journey(journey),
+                "escalated": False,
+            })
+
+    else:
+        # User clicks "I'm Safe"
+        journey.missed_check_count = 0
+        journey.last_safety_check_at = now
+        journey.next_safety_check_at = now + timedelta(minutes=10)
+        journey.safety_check_pending = False
+        journey.save()
+
+        return Response({
+            "message": "✅ Check-in recorded: You are safe! Next check-in in 10 minutes.",
+            "journey": _serialize_journey(journey),
+        })
+
 
 
 

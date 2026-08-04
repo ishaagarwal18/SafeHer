@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { FiAlertCircle, FiCheckCircle, FiMapPin, FiNavigation, FiPhone, FiShield, FiUsers } from "react-icons/fi";
 import { dashboardApi } from "../services/api";
@@ -10,8 +10,8 @@ const transportOptions = [
 
 const statusClass = (status = "Active") => {
   const value = status.toLowerCase();
-  if (value.includes("complete") || value.includes("safe")) return "completed";
-  if (value.includes("cancel") || value.includes("alert")) return "alert";
+  if (value.includes("complete")) return "completed";
+  if (value.includes("alert") || value.includes("unsafe")) return "alert";
   return "active";
 };
 
@@ -25,15 +25,20 @@ function Journey() {
   const [error, setError] = useState("");
   const [noticeMsg, setNoticeMsg] = useState("");
   const [loading, setLoading] = useState(false);
-  const [checkInJourney, setCheckInJourney] = useState(null);
+
+  // Active Journey & Safety Check Modal State
+  const [activeJourney, setActiveJourney] = useState(null);
+  const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [checkingIn, setCheckingIn] = useState(false);
+  const [countdown, setCountdown] = useState(60);
+
+  const checkInTimerRef = useRef(null);
+  const modalCountdownRef = useRef(null);
 
   useEffect(() => {
-    dashboardApi.get("api/journey/")
-      .then((res) => setJourneys(Array.isArray(res.data) ? res.data : []))
-      .catch(() => setJourneys([]));
-
-    dashboardApi.get("api/contacts/")
+    fetchJourneys();
+    dashboardApi
+      .get("api/contacts/")
       .then((res) => {
         const trusted = (Array.isArray(res.data) ? res.data : []).filter((contact) => contact.is_trusted);
         setContacts(trusted);
@@ -42,19 +47,57 @@ function Journey() {
       .catch(() => setContacts([]));
   }, []);
 
+  const fetchJourneys = () => {
+    dashboardApi
+      .get("api/journey/")
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        setJourneys(list);
+        const active = list.find((j) => (j.status || "Active") === "Active");
+        setActiveJourney(active || null);
+      })
+      .catch(() => setJourneys([]));
+  };
+
+  // Periodic 10-Minute Safety Check Trigger
   useEffect(() => {
-    const loadActiveJourney = async () => {
-      try {
-        const response = await dashboardApi.get("api/journey/active/");
-        if (response.data?.journey?.safety_check_pending) setCheckInJourney(response.data.journey);
-      } catch {
-        // Silent error
-      }
+    if (activeJourney) {
+      // Trigger safety prompt modal every 10 minutes (600,000 ms)
+      checkInTimerRef.current = setInterval(() => {
+        setShowCheckInModal(true);
+      }, 600000);
+    } else {
+      if (checkInTimerRef.current) clearInterval(checkInTimerRef.current);
+      setShowCheckInModal(false);
+    }
+
+    return () => {
+      if (checkInTimerRef.current) clearInterval(checkInTimerRef.current);
     };
-    loadActiveJourney();
-    const interval = window.setInterval(loadActiveJourney, 60000);
-    return () => window.clearInterval(interval);
-  }, []);
+  }, [activeJourney]);
+
+  // Modal 60-Second Auto-Dismiss / Missed Check-in Count Timer
+  useEffect(() => {
+    if (showCheckInModal) {
+      setCountdown(60);
+      modalCountdownRef.current = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(modalCountdownRef.current);
+            handleMissedCheckIn();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (modalCountdownRef.current) clearInterval(modalCountdownRef.current);
+    }
+
+    return () => {
+      if (modalCountdownRef.current) clearInterval(modalCountdownRef.current);
+    };
+  }, [showCheckInModal]);
 
   const change = (event) => {
     setUnsafeWarning("");
@@ -83,6 +126,7 @@ function Journey() {
   const toggleContact = (id) =>
     setSelectedContacts((current) => (current.includes(id) ? current.filter((contactId) => contactId !== id) : [...current, id]));
 
+  // Submit — Start Safe Journey
   const submit = async (event) => {
     event.preventDefault();
     setError("");
@@ -98,11 +142,18 @@ function Journey() {
         return;
       }
 
-      setJourneys((current) => [response.data?.journey || response.data, ...current]);
+      const created = response.data?.journey || response.data;
+      const duration = response.data?.estimated_duration_minutes || created.expected_duration_minutes || 30;
+
+      fetchJourneys();
       setForm({ source: "", destination: "", transport: "Car" });
       setUnsafeWarning("");
-      setNoticeMsg("🚀 Journey started! Trusted contacts have been notified.");
-      setTimeout(() => setNoticeMsg(""), 5000);
+
+      setNoticeMsg(
+        `🚀 Safe Journey started! Estimated duration: ~${duration} mins. Periodic safety check scheduled every 10 mins.`
+      );
+
+      // Trigger first safety check after 10 mins (or allow quick manual test)
     } catch (requestError) {
       setError(requestError.response?.data?.error || "Could not start the journey. Please try again.");
     } finally {
@@ -110,47 +161,66 @@ function Journey() {
     }
   };
 
-  // Send Safety Notice ("I'm Safe" button - keeps journey active)
-  const sendSafeNotice = async (journeyId) => {
+  // Handle User Response: "I'm Safe"
+  const handleImSafe = async () => {
+    if (!activeJourney) return;
     setCheckingIn(true);
     try {
-      const response = await dashboardApi.post(`api/journey/${journeyId}/check-in/`, { response: "safe_notice" });
-      setNoticeMsg(response.data.message || "🛡️ Safety notice sent: Trusted contacts notified that you are safe!");
+      const res = await dashboardApi.post(`api/journey/${activeJourney.id}/check-in/`, { response: "safe" });
+      setShowCheckInModal(false);
+      setNoticeMsg(res.data?.message || "✅ Check-in recorded: You are safe! Next check-in scheduled in 10 minutes.");
       setTimeout(() => setNoticeMsg(""), 5000);
+      fetchJourneys();
     } catch {
-      setError("Could not send safety check-in notice. Please try again.");
+      setError("Failed to record safety check-in.");
     } finally {
       setCheckingIn(false);
     }
   };
 
-  // Complete Journey button handler
+  // Handle User Response: "Not Safe"
+  const handleNotSafe = async () => {
+    if (!activeJourney) return;
+    setCheckingIn(true);
+    try {
+      const res = await dashboardApi.post(`api/journey/${activeJourney.id}/check-in/`, { response: "not_safe" });
+      setShowCheckInModal(false);
+      setNoticeMsg("🚨 URGENT: Emergency alert email sent to trusted contacts that you are NOT SAFE!");
+      fetchJourneys();
+    } catch {
+      setError("Failed to send Not Safe alert.");
+    } finally {
+      setCheckingIn(false);
+    }
+  };
+
+  // Handle Missed Check-in (Ignored prompt)
+  const handleMissedCheckIn = async () => {
+    if (!activeJourney) return;
+    try {
+      const res = await dashboardApi.post(`api/journey/${activeJourney.id}/check-in/`, { response: "missed" });
+      setShowCheckInModal(false);
+      if (res.data?.escalated) {
+        setNoticeMsg("⚠️ 2 safety check-ins missed! Escalation email automatically sent to trusted contacts.");
+      } else {
+        setNoticeMsg("⚠️ Safety check-in prompt missed (1/2). Next check-in in 10 minutes.");
+      }
+      fetchJourneys();
+    } catch {
+      setShowCheckInModal(false);
+    }
+  };
+
+  // Mark Journey Complete
   const markCompleted = async (journeyId) => {
     setCheckingIn(true);
     try {
       const response = await dashboardApi.post(`api/journey/${journeyId}/complete/`);
-      const updated = response.data.journey;
-      setJourneys((current) => current.map((j) => (j.id === updated.id ? updated : j)));
-      setCheckInJourney(null);
       setNoticeMsg("✅ Journey marked as Completed.");
       setTimeout(() => setNoticeMsg(""), 4000);
+      fetchJourneys();
     } catch {
       setError("Could not complete this journey. Please try again.");
-    } finally {
-      setCheckingIn(false);
-    }
-  };
-
-  const answerSafetyCheck = async (responseValue) => {
-    if (!checkInJourney) return;
-    setCheckingIn(true);
-    try {
-      const response = await dashboardApi.post(`api/journey/${checkInJourney.id}/check-in/`, { response: responseValue });
-      const updated = response.data.journey;
-      setJourneys((current) => current.map((j) => (j.id === updated.id ? updated : j)));
-      setCheckInJourney(null);
-    } catch {
-      setError("We could not save your safety check-in. Please try again.");
     } finally {
       setCheckingIn(false);
     }
@@ -159,23 +229,62 @@ function Journey() {
   return (
     <main className="journey-page">
       <div className="journey-shell">
-        {checkInJourney && (
+        {/* Periodic Safety Check Modal: Are you safe? */}
+        {showCheckInModal && activeJourney && (
           <div className="checkin-overlay" role="dialog" aria-modal="true" aria-labelledby="checkin-title">
-            <section className="checkin-modal">
-              <span className="checkin-icon">
+            <section className="checkin-modal" style={{ maxWidth: "450px", borderTop: "6px solid #ff4f81" }}>
+              <span className="checkin-icon" style={{ background: "#ffe7ef", color: "#ff4f81" }}>
                 <FiShield />
               </span>
-              <p className="eyebrow">SAFEHER CHECK-IN</p>
-              <h2 id="checkin-title">Are you safe?</h2>
-              <p>
-                Safety check for journey to <strong>{checkInJourney.destination}</strong>. Tell us what is happening.
+              <p className="eyebrow" style={{ color: "#ff4f81", marginTop: "10px" }}>
+                SAFEHER 10-MIN SAFETY CHECK
               </p>
-              <div className="checkin-actions">
-                <button className="checkin-safe" disabled={checkingIn} onClick={() => answerSafetyCheck("safe")}>
-                  I'm safe — end journey
+              <h2 id="checkin-title" style={{ fontSize: "28px", margin: "6px 0" }}>
+                Are you safe?
+              </h2>
+              <p style={{ fontSize: "14px", color: "#64748b", margin: "6px 0 16px" }}>
+                Journey: <strong>{activeJourney.source}</strong> → <strong>{activeJourney.destination}</strong>
+                <br />
+                <span style={{ fontSize: "12px", color: "#94a3b8" }}>
+                  Auto-dismiss in {countdown}s (Missed count will increase)
+                </span>
+              </p>
+
+              <div className="checkin-actions" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <button
+                  type="button"
+                  className="checkin-safe"
+                  disabled={checkingIn}
+                  onClick={handleImSafe}
+                  style={{
+                    background: "#10b981",
+                    color: "white",
+                    padding: "14px",
+                    borderRadius: "12px",
+                    fontWeight: "800",
+                    fontSize: "15px",
+                    border: "0",
+                    cursor: "pointer",
+                  }}
+                >
+                  ✅ I'm Safe
                 </button>
-                <button className="checkin-later" disabled={checkingIn} onClick={() => answerSafetyCheck("still_travelling")}>
-                  I'm still travelling
+                <button
+                  type="button"
+                  disabled={checkingIn}
+                  onClick={handleNotSafe}
+                  style={{
+                    background: "#dc2626",
+                    color: "white",
+                    padding: "14px",
+                    borderRadius: "12px",
+                    fontWeight: "800",
+                    fontSize: "15px",
+                    border: "0",
+                    cursor: "pointer",
+                  }}
+                >
+                  🚨 Not Safe
                 </button>
               </div>
             </section>
@@ -193,12 +302,72 @@ function Journey() {
           </div>
         </header>
 
+        {/* Active Journey Estimate & Safety Banner */}
+        {activeJourney && (
+          <div
+            style={{
+              background: "linear-gradient(135deg, #fff0f5 0%, #fff 100%)",
+              border: "1.5px solid #ff9ab7",
+              borderRadius: "18px",
+              padding: "18px 24px",
+              marginBottom: "24px",
+              boxShadow: "0 10px 25px rgba(255,79,129,0.1)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "14px",
+            }}
+          >
+            <div>
+              <span
+                style={{
+                  background: "#ff4f81",
+                  color: "white",
+                  fontSize: "11px",
+                  fontWeight: "800",
+                  padding: "4px 10px",
+                  borderRadius: "99px",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                ACTIVE JOURNEY MONITORING
+              </span>
+              <h3 style={{ margin: "8px 0 4px", fontSize: "18px", color: "#1e293b" }}>
+                📍 {activeJourney.source} → {activeJourney.destination}
+              </h3>
+              <p style={{ margin: "0", fontSize: "13px", color: "#64748b" }}>
+                ⏱ Estimated Time: <strong>~{activeJourney.expected_duration_minutes || 30} mins</strong> ({activeJourney.transport_mode || "Car"}) • Safety check every 10 mins
+              </p>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                type="button"
+                className="btn-locate-small"
+                onClick={() => setShowCheckInModal(true)}
+                style={{ position: "static", padding: "10px 16px", fontSize: "13px", background: "#ff4f81", color: "white" }}
+              >
+                🛡️ Test Safety Check
+              </button>
+              <button
+                type="button"
+                className="complete-button"
+                style={{ background: "#e0f2fe", color: "#0369a1", borderColor: "#bae6fd", padding: "10px 16px", fontSize: "13px" }}
+                onClick={() => markCompleted(activeJourney.id)}
+              >
+                End Journey
+              </button>
+            </div>
+          </div>
+        )}
+
         {noticeMsg && (
           <div
             style={{
-              background: "#ecfdf5",
-              color: "#047857",
-              border: "1px solid #a7f3d0",
+              background: noticeMsg.includes("🚨") || noticeMsg.includes("⚠️") ? "#fef2f2" : "#ecfdf5",
+              color: noticeMsg.includes("🚨") || noticeMsg.includes("⚠️") ? "#991b1b" : "#047857",
+              border: `1px solid ${noticeMsg.includes("🚨") || noticeMsg.includes("⚠️") ? "#fca5a5" : "#a7f3d0"}`,
               borderRadius: "12px",
               padding: "14px 18px",
               marginBottom: "20px",
@@ -395,27 +564,16 @@ function Journey() {
                               <FiNavigation /> Map
                             </button>
                             {isActive && (
-                              <>
-                                <button
-                                  type="button"
-                                  className="complete-button"
-                                  disabled={checkingIn}
-                                  onClick={() => sendSafeNotice(journey.id)}
-                                  title="Send safety check-in notice to trusted contacts"
-                                >
-                                  <FiCheckCircle /> I'm safe
-                                </button>
-                                <button
-                                  type="button"
-                                  className="complete-button"
-                                  style={{ background: "#e0f2fe", color: "#0369a1", borderColor: "#bae6fd" }}
-                                  disabled={checkingIn}
-                                  onClick={() => markCompleted(journey.id)}
-                                  title="End this journey"
-                                >
-                                  End
-                                </button>
-                              </>
+                              <button
+                                type="button"
+                                className="complete-button"
+                                style={{ background: "#e0f2fe", color: "#0369a1", borderColor: "#bae6fd" }}
+                                disabled={checkingIn}
+                                onClick={() => markCompleted(journey.id)}
+                                title="End this journey"
+                              >
+                                End
+                              </button>
                             )}
                           </div>
                         </td>
