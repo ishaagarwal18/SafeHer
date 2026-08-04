@@ -10,7 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -175,6 +179,11 @@ REST_FRAMEWORK={
     )
 }
 DEFAULT_FROM_EMAIL=EMAIL_HOST_USER
+
+# Set these in your environment; do not put API keys in source control.
+GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+SAFETY_CHECK_INTERVAL_MINUTES = int(os.environ.get("SAFETY_CHECK_INTERVAL_MINUTES", "10"))
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'

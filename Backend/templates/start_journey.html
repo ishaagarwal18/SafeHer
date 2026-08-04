@@ -1,110 +1,415 @@
 {% load static %}
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Journey</title>
-<link rel="stylesheet" href="{% static 'css/features.css' %}">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SafeHer – Start Journey</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/journey_page.css' %}" />
 </head>
-
 <body>
 
-<div class="container">
-
-<h1 class="page-title">
-🚖 Start Journey
-</h1>
-
-<div class="card">
-<form method="POST">
-
-{% csrf_token %}
-{% if unsafe_warning %}
-<input type="hidden" name="force_proceed" value="1">
-{% endif %}
-
-{% if unsafe_warning %}
-<div style="background:#fff3cd;border:1px solid #ffc107;color:#856404;padding:14px 18px;border-radius:12px;margin-bottom:16px;font-size:15px;font-weight:600;">
-  {{ unsafe_warning }}<br>
-  <small style="font-weight:400;">You can still proceed by submitting again.</small>
-</div>
-{% endif %}
-
-<input type="text"
-name="source"
-placeholder="Source" required
-value="{{ request.POST.source|default:'' }}">
-
-<input type="text"
-name="destination"
-placeholder="Destination" required
-value="{{ request.POST.destination|default:'' }}">
-
-<select name="transport">
-<option>Car</option>
-<option>Bus</option>
-<option>Train</option>
-</select>
-
-<button class="btn" type="submit">
-{% if unsafe_warning %}Proceed Anyway{% else %}Start Journey{% endif %}
-</button>
-
-</form>
-</div>
-<div class="card">
-<h2>Recent Journeys</h2>
-<table>
-
-<tr>
-<th>Source</th>
-<th>Destination</th>
-<th>Transport</th>
-<th>Status</th>
-<th>Action</th>
-</tr>
-
-{% for j in journeys %}
-
-<tr>
-<td>{{ j.source }}</td>
-<td>{{ j.destination }}</td>
-<td>{{ j.transport_mode }}</td>
-<td><span class="status-pill">{{ j.status }}</span></td>
-<td>
-    <button type="button" class="btn-sm" onclick="openGoogleMaps('{{ j.source|escapejs }}', '{{ j.destination|escapejs }}', '{{ j.transport_mode|escapejs }}')">
-        Open Map
-    </button>
-</td>
-</tr>
-
-{% empty %}
-<tr>
-    <td colSpan="5" style="text-align: center;">No Journey Found</td>
-</tr>
-{% endfor %}
-
-</table>
-
+<!-- Safety check-in overlay (shown via JS when needed) -->
+<div class="checkin-overlay" id="checkinOverlay" role="dialog" aria-modal="true" aria-labelledby="checkinTitle" hidden>
+  <section class="checkin-modal">
+    <span class="checkin-icon">🛡️</span>
+    <p class="eyebrow">SAFEHER CHECK-IN</p>
+    <h2 id="checkinTitle">Are you safe?</h2>
+    <p>Your expected arrival time for <strong id="checkinDestination"></strong> has passed. Tell us what is happening.</p>
+    <div class="checkin-actions">
+      <button class="checkin-safe" id="btnSafe">I'm safe — end journey</button>
+      <button class="checkin-later" id="btnStillTravelling">I'm still travelling</button>
+    </div>
+  </section>
 </div>
 
-</div>
+<main class="journey-page">
+  <div class="journey-shell">
 
-<div class="nav-links">
-    <a href="/dashboard/" class="btn">
-        Back to Dashboard
-    </a>
-</div>
+    <!-- Header -->
+    <header class="journey-heading">
+      <span class="journey-heading__icon">🧭</span>
+      <div>
+        <p class="eyebrow">SAFEHER TRIP PLANNER</p>
+        <h1>Start a safe journey</h1>
+        <p>Share your journey plan with people you trust.</p>
+      </div>
+    </header>
+
+    <section class="journey-layout">
+
+      <!-- Journey form -->
+      <form class="journey-form-card" id="journeyForm">
+        {% csrf_token %}
+        <div class="section-title">
+          <div><h2>Journey details</h2><p>Plan your route before you leave.</p></div>
+          <span class="secure-label">🛡️ Protected</span>
+        </div>
+
+        <!-- Unsafe area warning -->
+        <div class="journey-warning" id="unsafeWarning" hidden>
+          <span>⚠️</span>
+          <div><strong>Safety notice</strong><p id="unsafeMsg"></p></div>
+        </div>
+
+        <!-- Locations -->
+        <div class="location-fields">
+          <label>
+            <span>📍 Starting point</span>
+            <div class="input-with-action">
+              <input id="source" name="source" placeholder="Enter source" required />
+              <button type="button" id="btnLocate">Use my location</button>
+            </div>
+          </label>
+          <div class="route-line" aria-hidden="true"></div>
+          <label>
+            <span>🧭 Destination</span>
+            <input id="destination" name="destination" placeholder="Where are you going?" required />
+          </label>
+        </div>
+
+        <!-- Transport -->
+        <fieldset class="transport-picker">
+          <legend>How are you travelling?</legend>
+          <div id="transportOptions">
+            <button type="button" class="transport-option selected" data-value="Car">
+              <span>🚗</span>Car
+            </button>
+            <button type="button" class="transport-option" data-value="Bus">
+              <span>🚌</span>Bus
+            </button>
+            <button type="button" class="transport-option" data-value="Train">
+              <span>🚆</span>Train
+            </button>
+            <button type="button" class="transport-option" data-value="Walking">
+              <span>🚶</span>Walking
+            </button>
+          </div>
+        </fieldset>
+        <input type="hidden" id="transport" name="transport" value="Car" />
+
+        <!-- ETA estimate -->
+        <div class="trip-estimate">
+          🕐 <span id="estimateText">Add locations to get a live Google Maps ETA</span>
+          <button type="button" id="btnETA">Get live ETA</button>
+        </div>
+
+        <p class="form-error" id="formError" hidden></p>
+
+        <button class="journey-start-button" id="btnStart" type="submit">
+          Start safe journey 🧭
+        </button>
+      </form>
+
+      <!-- Safety sidebar -->
+      <aside class="safety-card">
+        <div class="section-title">
+          <div><h2>Safety check</h2><p>Your journey settings</p></div>
+          <span style="color:#ff4f81;font-size:24px">🛡️</span>
+        </div>
+
+        <label class="switch-row">
+          <span>
+            🧭
+            <span>
+              <strong>Live location sharing</strong>
+              <small>Share your route while travelling</small>
+            </span>
+          </span>
+          <input type="checkbox" id="shareLocation" checked />
+          <i></i>
+        </label>
+
+        <div class="contact-section">
+          <div class="contact-section__heading">
+            <span>👥 Notify contacts</span>
+            <small id="selectedCount">0 selected</small>
+          </div>
+          <div id="contactList">
+            <p class="empty-contacts">📞 Add a trusted contact to notify them when you leave.</p>
+          </div>
+        </div>
+
+        <p class="safety-note" id="safetyNote">
+          ✅ Your selected contacts can follow your journey.
+        </p>
+      </aside>
+    </section>
+
+    <!-- Recent journeys -->
+    <section class="recent-journeys">
+      <div class="section-title">
+        <div><h2>Recent journeys</h2><p>Your latest safety plans at a glance.</p></div>
+        <a href="/dashboard/history/">View all history</a>
+      </div>
+      <div class="journey-table-wrap">
+        <table>
+          <thead>
+            <tr><th>Route</th><th>Transport</th><th>Started</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody id="journeyTableBody">
+            <tr><td colspan="5">
+              <div class="empty-journeys">
+                🧭 <strong>No journeys yet</strong>
+                <span>Start your first safe journey above.</span>
+              </div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <a href="/dashboard/" class="back-link">← Back to dashboard</a>
+  </div>
+</main>
 
 <script>
-function openGoogleMaps(source, destination, transport) {
-    let mode = 'driving';
-    if (transport && (transport.toLowerCase() === 'bus' || transport.toLowerCase() === 'train')) {
-        mode = 'transit';
-    }
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(source)}&destination=${encodeURIComponent(destination)}&travelmode=${mode}`;
-    window.open(url, '_blank');
+const CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+const api = async (method, url, body) => {
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return res.json();
+};
+
+// --- State ---
+let transport = 'Car';
+let selectedContacts = [];
+let allContacts = [];
+let routeEstimate = null;
+let unsafeWarning = '';
+let checkInJourney = null;
+
+// --- DOM refs ---
+const sourceEl = document.getElementById('source');
+const destEl = document.getElementById('destination');
+const transportHidden = document.getElementById('transport');
+const estimateText = document.getElementById('estimateText');
+const formError = document.getElementById('formError');
+const unsafeWarn = document.getElementById('unsafeWarning');
+const unsafeMsg = document.getElementById('unsafeMsg');
+const btnStart = document.getElementById('btnStart');
+const btnETA = document.getElementById('btnETA');
+const contactList = document.getElementById('contactList');
+const selectedCount = document.getElementById('selectedCount');
+const safetyNote = document.getElementById('safetyNote');
+const shareLocation = document.getElementById('shareLocation');
+const tbodyEl = document.getElementById('journeyTableBody');
+const checkinOverlay = document.getElementById('checkinOverlay');
+
+// --- Transport picker ---
+document.getElementById('transportOptions').addEventListener('click', e => {
+  const btn = e.target.closest('.transport-option');
+  if (!btn) return;
+  document.querySelectorAll('.transport-option').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  transport = btn.dataset.value;
+  transportHidden.value = transport;
+  routeEstimate = null;
+  updateEstimate();
+});
+
+// --- Locate ---
+document.getElementById('btnLocate').addEventListener('click', () => {
+  if (!navigator.geolocation) return showError('Location services not supported.');
+  navigator.geolocation.getCurrentPosition(
+    ({ coords }) => { sourceEl.value = `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`; resetWarnings(); },
+    () => showError('Could not access your location. Please enter it manually.')
+  );
+});
+
+// --- Input change ---
+[sourceEl, destEl].forEach(el => el.addEventListener('input', () => { routeEstimate = null; unsafeWarning = ''; unsafeWarn.hidden = true; updateEstimate(); }));
+
+// --- ETA ---
+btnETA.addEventListener('click', async () => {
+  if (!sourceEl.value || !destEl.value) return showError('Add both locations before requesting an ETA.');
+  hideError();
+  btnETA.disabled = true; btnETA.textContent = 'Checking…';
+  try {
+    const data = await api('POST', '/dashboard/api/journey/estimate/', { source: sourceEl.value, destination: destEl.value, transport });
+    routeEstimate = data;
+    updateEstimate();
+  } catch {
+    routeEstimate = { available: false, message: 'Could not get ETA. Please try again.' };
+    updateEstimate();
+  } finally { btnETA.disabled = false; btnETA.textContent = 'Get live ETA'; }
+});
+
+function updateEstimate() {
+  if (routeEstimate?.available) { estimateText.textContent = routeEstimate.message; return; }
+  if (!sourceEl.value || !destEl.value) { estimateText.textContent = 'Add locations to get a live Google Maps ETA'; return; }
+  estimateText.textContent = routeEstimate?.message || 'Get a live Google Maps ETA before you start';
 }
+
+// --- Submit ---
+document.getElementById('journeyForm').addEventListener('submit', async e => {
+  e.preventDefault(); hideError();
+  btnStart.disabled = true; btnStart.textContent = 'Starting journey…';
+  try {
+    const payload = { source: sourceEl.value, destination: destEl.value, transport, force: Boolean(unsafeWarning) };
+    const data = await api('POST', '/dashboard/api/journey/', payload);
+    if (data.unsafe_warning && !payload.force) {
+      unsafeWarning = data.unsafe_warning;
+      unsafeMsg.textContent = data.unsafe_warning;
+      unsafeWarn.hidden = false;
+      btnStart.textContent = 'Proceed anyway';
+      btnStart.disabled = false;
+      return;
+    }
+    const journey = data.journey || data;
+    prependJourneyRow(journey);
+    openGoogleMaps(payload.source, payload.destination, transport);
+    sourceEl.value = ''; destEl.value = ''; routeEstimate = null; unsafeWarning = '';
+    unsafeWarn.hidden = true; btnStart.textContent = 'Start safe journey 🧭';
+    updateEstimate();
+  } catch (err) {
+    showError(err?.message || 'Could not start the journey. Please try again.');
+  } finally { btnStart.disabled = false; }
+});
+
+// --- Contacts ---
+async function loadContacts() {
+  try {
+    const data = await api('GET', '/dashboard/api/contacts/');
+    allContacts = Array.isArray(data) ? data.filter(c => c.is_trusted) : [];
+    selectedContacts = allContacts.map(c => c.id);
+    renderContacts();
+  } catch { /* silent */ }
+}
+
+function renderContacts() {
+  selectedCount.textContent = `${selectedContacts.length} selected`;
+  if (!allContacts.length) {
+    contactList.innerHTML = '<p class="empty-contacts">📞 Add a trusted contact to notify them when you leave.</p>';
+    return;
+  }
+  contactList.innerHTML = allContacts.map(c => `
+    <label class="contact-choice">
+      <input type="checkbox" ${selectedContacts.includes(c.id) ? 'checked' : ''} data-id="${c.id}" />
+      <span class="contact-avatar">${(c.contact_name || '?')[0].toUpperCase()}</span>
+      <span><strong>${c.contact_name}</strong><small>${c.relationship || 'Trusted contact'}</small></span>
+    </label>
+  `).join('');
+  contactList.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const id = parseInt(cb.dataset.id);
+      if (cb.checked) { if (!selectedContacts.includes(id)) selectedContacts.push(id); }
+      else { selectedContacts = selectedContacts.filter(x => x !== id); }
+      selectedCount.textContent = `${selectedContacts.length} selected`;
+    });
+  });
+}
+
+shareLocation.addEventListener('change', () => {
+  safetyNote.textContent = shareLocation.checked
+    ? '✅ Your selected contacts can follow your journey.'
+    : '🔇 Location sharing is currently off.';
+});
+
+// --- Journeys table ---
+async function loadJourneys() {
+  try {
+    const data = await api('GET', '/dashboard/api/journey/');
+    const journeys = Array.isArray(data) ? data : [];
+    if (!journeys.length) return;
+    tbodyEl.innerHTML = journeys.slice(0, 5).map(j => journeyRow(j)).join('');
+    attachRowListeners();
+  } catch { /* silent */ }
+}
+
+function journeyRow(j) {
+  const st = (j.status || 'Active').toLowerCase();
+  const cls = st.includes('complet') || st.includes('safe') ? 'completed' : st.includes('cancel') || st.includes('alert') ? 'alert' : 'active';
+  const time = j.start_time ? new Date(j.start_time).toLocaleString() : 'Just now';
+  const isActive = (j.status || 'Active') === 'Active';
+  return `<tr data-id="${j.id}">
+    <td><strong>${j.source}</strong><span>${j.destination}</span></td>
+    <td>${j.transport_mode || j.transport || 'Car'}</td>
+    <td>${time}</td>
+    <td><span class="journey-status ${cls}">${j.status || 'Active'}</span></td>
+    <td><div class="journey-actions">
+      <button type="button" class="map-button" data-src="${j.source}" data-dst="${j.destination}" data-trn="${j.transport_mode || j.transport || 'Car'}">🧭 Map</button>
+      ${isActive ? `<button type="button" class="complete-button" data-journey-id="${j.id}">✅ I'm safe</button>` : ''}
+    </div></td>
+  </tr>`;
+}
+
+function prependJourneyRow(j) {
+  if (tbodyEl.querySelector('.empty-journeys')) tbodyEl.innerHTML = '';
+  tbodyEl.insertAdjacentHTML('afterbegin', journeyRow(j));
+  attachRowListeners();
+}
+
+function attachRowListeners() {
+  tbodyEl.querySelectorAll('.map-button').forEach(btn => {
+    btn.addEventListener('click', () => openGoogleMaps(btn.dataset.src, btn.dataset.dst, btn.dataset.trn));
+  });
+  tbodyEl.querySelectorAll('.complete-button').forEach(btn => {
+    btn.addEventListener('click', () => markCompleted(parseInt(btn.dataset.journeyId)));
+  });
+}
+
+async function markCompleted(id) {
+  try {
+    const data = await api('POST', `/dashboard/api/journey/${id}/complete/`);
+    const updated = data.journey;
+    const row = tbodyEl.querySelector(`tr[data-id="${id}"]`);
+    if (row) { row.outerHTML = journeyRow(updated); attachRowListeners(); }
+    if (checkInJourney?.id === id) { checkinOverlay.hidden = true; checkInJourney = null; }
+  } catch { showError('Could not complete this journey. Please try again.'); }
+}
+
+// --- Safety check-in ---
+async function loadActiveJourney() {
+  try {
+    const data = await api('GET', '/dashboard/api/journey/active/');
+    if (data?.journey?.safety_check_pending) {
+      checkInJourney = data.journey;
+      document.getElementById('checkinDestination').textContent = checkInJourney.destination;
+      checkinOverlay.hidden = false;
+    }
+  } catch { /* silent */ }
+}
+
+document.getElementById('btnSafe').addEventListener('click', () => answerCheckIn('safe'));
+document.getElementById('btnStillTravelling').addEventListener('click', () => answerCheckIn('still_travelling'));
+
+async function answerCheckIn(response) {
+  if (!checkInJourney) return;
+  document.getElementById('btnSafe').disabled = true;
+  document.getElementById('btnStillTravelling').disabled = true;
+  try {
+    const data = await api('POST', `/dashboard/api/journey/${checkInJourney.id}/check-in/`, { response });
+    const updated = data.journey;
+    const row = tbodyEl.querySelector(`tr[data-id="${updated.id}"]`);
+    if (row) { row.outerHTML = journeyRow(updated); attachRowListeners(); }
+    checkinOverlay.hidden = true; checkInJourney = null;
+  } catch { showError('Could not save your check-in. Please try again.'); }
+  finally {
+    document.getElementById('btnSafe').disabled = false;
+    document.getElementById('btnStillTravelling').disabled = false;
+  }
+}
+
+// --- Helpers ---
+function openGoogleMaps(src, dst, trn) {
+  const mode = ['Bus', 'Train'].includes(trn) ? 'transit' : trn === 'Walking' ? 'walking' : 'driving';
+  window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(src)}&destination=${encodeURIComponent(dst)}&travelmode=${mode}`, '_blank', 'noopener,noreferrer');
+}
+function showError(msg) { formError.textContent = msg; formError.hidden = false; }
+function hideError() { formError.hidden = true; }
+function resetWarnings() { unsafeWarning = ''; unsafeWarn.hidden = true; hideError(); }
+
+// --- Init ---
+loadContacts();
+loadJourneys();
+loadActiveJourney();
+setInterval(loadActiveJourney, 60000);
 </script>
 </body>
 </html>
