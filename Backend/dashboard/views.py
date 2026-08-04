@@ -215,6 +215,7 @@ def sos_page(request):
 def contacts_page(request):
     user = _get_current_user(request)
     error = None
+    success = None
 
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
@@ -224,6 +225,10 @@ def contacts_page(request):
 
         if not all([name, phone, relationship]):
             error = "Name, phone and relationship are required."
+        elif not phone.isdigit() or len(phone) != 10:
+            error = "Phone number must be exactly 10 digits."
+        elif email and "@" not in email:
+            error = "Please enter a valid email address."
         elif user is None:
             error = "No user account found. Please register first."
         else:
@@ -234,13 +239,13 @@ def contacts_page(request):
                 email=email or None,
                 relationship=relationship,
             )
+            success = f"{name} added successfully."
 
     if user:
         all_contacts = EmergencyContact.objects.filter(user=user)
         trusted_contacts = all_contacts.filter(is_trusted=True)
         regular_contacts = all_contacts.filter(is_trusted=False)
     else:
-        all_contacts = EmergencyContact.objects.none()
         trusted_contacts = EmergencyContact.objects.none()
         regular_contacts = EmergencyContact.objects.none()
 
@@ -248,6 +253,7 @@ def contacts_page(request):
         "contacts": regular_contacts,
         "trusted_contacts": trusted_contacts,
         "error": error,
+        "success": success,
     })
 
 

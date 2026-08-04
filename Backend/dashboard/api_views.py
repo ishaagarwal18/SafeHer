@@ -79,6 +79,12 @@ def contacts_api(request):
     if not all([name, phone, relationship]):
         return Response({"error": "Name, phone, and relationship are required."}, status=status.HTTP_400_BAD_REQUEST)
 
+    if not phone.isdigit() or len(phone) != 10:
+        return Response({"error": "Phone number must be exactly 10 digits."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if email and "@" not in email:
+        return Response({"error": "Please enter a valid email address."}, status=status.HTTP_400_BAD_REQUEST)
+
     contact = EmergencyContact.objects.create(
         user=user,
         contact_name=name,
