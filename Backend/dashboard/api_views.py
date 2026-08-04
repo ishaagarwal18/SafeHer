@@ -6,7 +6,8 @@ from journey.models import Journey
 from authentication.models import EmergencyContact, UserProfile
 from dashboard.models import SOSAlert
 from reports.models import UnsafeReport
-from .views import _send_sos_sms
+from .views import _send_sos_sms, _find_and_notify_nearest_station
+
 
 
 def _get_user(request):
@@ -358,6 +359,19 @@ def sos_start_api(request):
     lon = str(request.data.get("longitude", "") or "").strip()
     location = request.data.get("location", "").strip() or "Emergency GPS Location Alert"
 
+    user_name = user.name if user else ""
+    user_phone = user.phone_number if (user and hasattr(user, "phone_number")) else ""
+
+    # Find nearest Police Station / Women Safety Center & Dispatch Emergency Email Alert
+    station_info = _find_and_notify_nearest_station(
+        lat_str=lat,
+        lon_str=lon,
+        user_name=user_name,
+        user_phone=user_phone,
+        location_address=location,
+    )
+
+
     session = SOSSession.objects.create(
         user=user,
         status="Active",
@@ -365,6 +379,11 @@ def sos_start_api(request):
         initial_longitude=lon,
         initial_location=location,
         last_known_location=location,
+        nearest_station_name=station_info.get("name"),
+        nearest_station_type=station_info.get("type"),
+        nearest_station_phone=station_info.get("phone"),
+        nearest_station_email=station_info.get("email"),
+        nearest_station_distance_km=station_info.get("distance_km"),
     )
 
     # Log initial location
@@ -380,20 +399,21 @@ def sos_start_api(request):
     # Sync with legacy SOSAlert model for dashboard metrics
     SOSAlert.objects.create(status="Sent", location=location, latitude=lat, longitude=lon)
 
-    # Notify trusted contacts via SMS
-    user_name = user.name if user else ""
+    # Notify trusted contacts via Email/SMS
     trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True) if user else EmergencyContact.objects.filter(is_trusted=True)
     _send_sos_sms(location, trusted_contacts, user_name, lat, lon)
 
     serializer = SOSSessionSerializer(session, context={"request": request})
     return Response(
         {
-            "message": f"Emergency SOS activated! Notified {trusted_contacts.count()} contact(s).",
+            "message": f"🚨 EMERGENCY SOS DISPATCHED! Notified {trusted_contacts.count()} trusted contact(s) & nearest station: {station_info.get('name')}.",
             "session": serializer.data,
+            "nearest_station": station_info,
             "is_new": True,
         },
         status=status.HTTP_201_CREATED,
     )
+
 
 
 @api_view(["POST"])
