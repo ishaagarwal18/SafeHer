@@ -448,10 +448,9 @@ function Journey() {
                     placeholder="Enter starting location"
                     required
                   />
-                  {/* <button type="button" onClick={locate} className="btn-locate-small">
+                  <button type="button" onClick={locate} className="btn-locate-small" title="Use GPS location">
                     📍 GPS
-                  </button> */}
-                  <button type="button" onClick={locate}>📍 GPS</button>
+                  </button>
                 </div>
               </label>
 
