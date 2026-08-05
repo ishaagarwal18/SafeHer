@@ -572,7 +572,7 @@ function SOS() {
         <Link to="/sos/history" className="btn-secondary" style={{ padding: "10px 22px", borderRadius: "12px", textDecoration: "none", fontWeight: "600" }}>
           📜 View SOS History
         </Link>
-        <Link to="/dashboard" className="btn">
+        <Link to="/dashboard" className="back-dashboard-btn">
           ← Back to Dashboard
         </Link>
       </div>

@@ -84,8 +84,8 @@ function Profile() {
         </form>
       </div>
 
-      <div className="nav-links">
-        <Link to="/dashboard" className="btn btn-secondary">
+      <div className="nav-links" style={{ textAlign: "center", margin: "20px 0" }}>
+        <Link to="/dashboard" className="back-dashboard-btn">
           ← Back to Dashboard
         </Link>
       </div>

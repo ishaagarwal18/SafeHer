@@ -133,9 +133,9 @@
           <form method="POST" action="/dashboard/contacts/remove_trusted/">
             {% csrf_token %}
             <input type="hidden" name="contact_id" value="{{ contact.id }}">
-            <button type="submit" class="btn btn-small btn-danger"
+            <button type="submit" class="contact-btn remove-trust"
               onclick="return confirm('Remove {{ contact.contact_name }} from trusted contacts?')">
-              Remove
+              ✕ Remove Trust
             </button>
           </form>
         </td>
@@ -170,7 +170,7 @@
           <form method="POST" action="/dashboard/add_trusted_contact/">
             {% csrf_token %}
             <input type="hidden" name="contact_id" value="{{ contact.id }}">
-            <button type="submit" class="btn btn-small"
+            <button type="submit" class="contact-btn mark-trust"
               onclick="return confirm('Mark {{ contact.contact_name }} as trusted? They will receive SOS alerts.')">
               ⭐ Mark Trusted
             </button>
@@ -178,9 +178,9 @@
           <form method="POST" action="/dashboard/contacts/delete/">
             {% csrf_token %}
             <input type="hidden" name="contact_id" value="{{ contact.id }}">
-            <button type="submit" class="btn btn-small btn-danger"
+            <button type="submit" class="contact-btn delete"
               onclick="return confirm('Delete {{ contact.contact_name }}?')">
-              Delete
+              🗑 Delete
             </button>
           </form>
         </td>
@@ -196,7 +196,7 @@
 </div>
 
 <div class="nav-links" style="text-align:center;margin:20px 0;">
-  <a href="/dashboard/" class="btn">← Back to Dashboard</a>
+  <a href="/dashboard/" class="back-dashboard-btn">← Back to Dashboard</a>
 </div>
 
 </body>

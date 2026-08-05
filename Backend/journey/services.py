@@ -138,6 +138,10 @@ def send_not_safe_alert_email(journey, location=""):
     </div>
     """
     recipients = list(contacts.values_list("email", flat=True))
+    if journey.user and journey.user.email and journey.user.email not in recipients:
+        recipients.append(journey.user.email)
+    if not recipients and getattr(settings, "EMAIL_HOST_USER", None):
+        recipients.append(settings.EMAIL_HOST_USER)
     return _send_email(subject, plain, html, recipients)
 
 
@@ -171,4 +175,9 @@ def send_trusted_contact_escalation(journey):
         <a href="{app_url}" style="display:inline-block;background:#d92d4c;color:#fff;padding:12px 18px;border-radius:9px;text-decoration:none;font-weight:bold">Open SafeHer</a>
       </div>
     </div>"""
-    return _send_email(subject, plain, html, list(contacts.values_list("email", flat=True)))
+    recipients = list(contacts.values_list("email", flat=True))
+    if journey.user and journey.user.email and journey.user.email not in recipients:
+        recipients.append(journey.user.email)
+    if not recipients and getattr(settings, "EMAIL_HOST_USER", None):
+        recipients.append(settings.EMAIL_HOST_USER)
+    return _send_email(subject, plain, html, recipients)
