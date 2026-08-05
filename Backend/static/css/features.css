@@ -250,4 +250,99 @@ tr:last-child td {
   border-radius: 12px;
   font-size: 12px;
   font-weight: 600;
+<<<<<<< HEAD
+=======
+}
+
+.contact-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  line-height: 1.2;
+  letter-spacing: 0.2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+/* Mark Trusted — Emerald / Green style */
+.contact-btn.mark-trust {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #86efac;
+}
+.contact-btn.mark-trust:hover {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);
+  transform: translateY(-2px);
+}
+.contact-btn.mark-trust:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/* Remove Trust & Delete — Crimson / Rose style */
+.contact-btn.remove-trust,
+.contact-btn.delete {
+  background: #fff1f2;
+  color: #be123c;
+  border-color: #fda4af;
+}
+.contact-btn.remove-trust:hover,
+.contact-btn.delete:hover {
+  background: linear-gradient(135deg, #e11d48, #be123c);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.35);
+  transform: translateY(-2px);
+}
+.contact-btn.remove-trust:active,
+.contact-btn.delete:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/* Back to Dashboard Button — Start Journey Style */
+.back-dashboard-btn,
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 10px;
+  color: #59657a;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(89, 101, 122, 0.18);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.back-dashboard-btn:hover,
+.back-link:hover {
+  color: #ff4f81;
+  background: #fff0f5;
+  border-color: rgba(255, 79, 129, 0.35);
+  transform: translateX(-4px);
+  box-shadow: 0 4px 14px rgba(255, 79, 129, 0.12);
+  text-decoration: none;
+}
+
+.back-dashboard-btn:active,
+.back-link:active {
+  transform: translateX(-2px) scale(0.98);
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 }

@@ -1,11 +1,16 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+<<<<<<< HEAD
 import { FiClock, FiSearch, FiCalendar, FiRotateCcw, FiEye } from "react-icons/fi";
 import DashboardLayout from "../components/DashboardLayout";
 import Loader from "../components/Loader";
 import { dashboardApi } from "../services/api";
 import "../styles/journey.css";
 import "../styles/features.css";
+=======
+import "../styles/features.css";
+import { dashboardApi } from "../services/api";
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 
 function SOSHistory() {
   const [sessions, setSessions] = useState([]);
@@ -61,6 +66,7 @@ function SOSHistory() {
   };
 
   return (
+<<<<<<< HEAD
     <DashboardLayout>
       <div className="journey-page" style={{ margin: 0, padding: 0, background: "transparent" }}>
         <div className="journey-shell">
@@ -116,11 +122,60 @@ function SOSHistory() {
               <button
                 type="button"
                 className="map-button"
+=======
+    <>
+      <div className="container">
+        <h1 className="page-title">📜 SOS Emergency History</h1>
+
+        {/* Filters Card */}
+        <div className="card" style={{ marginBottom: "20px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: "14px",
+              alignItems: "center",
+            }}
+          >
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: "600", color: "#64748b" }}>SEARCH</label>
+              <input
+                type="text"
+                placeholder="Search location or status..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                style={{ marginBottom: "0" }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: "600", color: "#64748b" }}>FROM DATE</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                style={{ marginBottom: "0" }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: "12px", fontWeight: "600", color: "#64748b" }}>TO DATE</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                style={{ marginBottom: "0" }}
+              />
+            </div>
+            <div style={{ display: "flex", alignItems: "flex-end" }}>
+              <button
+                type="button"
+                className="btn-secondary"
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
                 onClick={() => {
                   setQuery("");
                   setStartDate("");
                   setEndDate("");
                 }}
+<<<<<<< HEAD
               >
                 <FiRotateCcw /> Reset Filters
               </button>
@@ -235,6 +290,119 @@ function SOSHistory() {
               ← Back to Dashboard
             </Link>
           </div>
+=======
+                style={{ padding: "12px 18px", width: "100%", borderRadius: "12px", cursor: "pointer" }}
+              >
+                Reset Filters
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* History Table */}
+        <div className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <h2 style={{ margin: "0" }}>Emergency Logs ({totalCount})</h2>
+            <Link to="/sos" className="btn-sm" style={{ padding: "8px 16px" }}>
+              🚨 Trigger SOS
+            </Link>
+          </div>
+
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "40px 0", color: "#ff4f81", fontWeight: "600" }}>
+              Loading SOS history...
+            </div>
+          ) : sessions.length > 0 ? (
+            <div style={{ overflowX: "auto" }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                    <th>Last Known Location</th>
+                    <th>Media / Log</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sessions.map((s) => (
+                    <tr key={s.id}>
+                      <td>
+                        <strong>{new Date(s.start_time).toLocaleDateString()}</strong>
+                      </td>
+                      <td>{new Date(s.start_time).toLocaleTimeString()}</td>
+                      <td>{s.end_time ? new Date(s.end_time).toLocaleTimeString() : "Ongoing"}</td>
+                      <td>{formatDuration(s.duration_seconds)}</td>
+                      <td>
+                        <span className={`status-pill ${s.status === "Active" ? "pending" : "completed"}`}>
+                          {s.status}
+                        </span>
+                      </td>
+                      <td style={{ maxWidth: "220px", wordBreak: "break-word" }}>
+                        {s.last_known_location || s.initial_location || "Location not recorded"}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn-sm"
+                          onClick={() => setSelectedSession(s)}
+                          style={{ fontSize: "12px" }}
+                        >
+                          View Details 🔍
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div style={{ textAlign: "center", color: "#aaa", fontStyle: "italic", padding: "30px 0" }}>
+              No emergency history matches your search.
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "12px",
+                marginTop: "24px",
+              }}
+            >
+              <button
+                type="button"
+                className="btn-sm"
+                disabled={page <= 1}
+                onClick={() => handlePageChange(page - 1)}
+              >
+                ← Previous
+              </button>
+              <span style={{ fontSize: "14px", fontWeight: "600", color: "#64748b" }}>
+                Page {page} of {totalPages}
+              </span>
+              <button
+                type="button"
+                className="btn-sm"
+                disabled={page >= totalPages}
+                onClick={() => handlePageChange(page + 1)}
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="nav-links" style={{ textAlign: "center", margin: "20px 0" }}>
+          <Link to="/dashboard" className="back-dashboard-btn">
+            ← Back to Dashboard
+          </Link>
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
         </div>
       </div>
 
@@ -315,7 +483,11 @@ function SOSHistory() {
           </div>
         </div>
       )}
+<<<<<<< HEAD
     </DashboardLayout>
+=======
+    </>
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
   );
 }
 

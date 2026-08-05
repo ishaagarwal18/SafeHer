@@ -247,6 +247,7 @@ def _serialize_journey(journey):
 def journey_api(request):
     user = _journey_user(request)
     if request.method == "GET":
+<<<<<<< HEAD
         if not Journey.objects.exists():
             now = timezone.now()
             Journey.objects.create(
@@ -283,6 +284,9 @@ def journey_api(request):
         if user and not journeys.exists():
             journeys = Journey.objects.all().order_by("-start_time")
 
+=======
+        journeys = Journey.objects.filter(user=user).order_by("-start_time") if user else Journey.objects.all().order_by("-start_time")
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
         return Response([_serialize_journey(journey) for journey in journeys])
 
     source = request.data.get("source", "").strip()
@@ -417,7 +421,11 @@ def journey_check_in_api(request, journey_id):
         )
 
         return Response({
+<<<<<<< HEAD
             "message": "🚨 URGENT: Emergency alert email sent to trusted contacts that you are NOT SAFE!",
+=======
+            "message": "🚨 URGENT: Emergency alert email sent to trusted contacts and your registered email account that you are NOT SAFE!",
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
             "journey": _serialize_journey(journey),
             "alert_triggered": True,
         }, status=status.HTTP_200_OK)

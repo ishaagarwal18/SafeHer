@@ -51,7 +51,10 @@ function VerifyOTP() {
     };
 
     return (
+<<<<<<< HEAD
         <div className="auth-page">
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
         <div className="verify-card">
             <h1>📧 Verify Your Email</h1>
             <p>
@@ -92,13 +95,20 @@ function VerifyOTP() {
                 <button
                     onClick={handleResend}
                     disabled={resending}
+<<<<<<< HEAD
                     style={{ background: "none", border: "none", color: "#ff4f81", fontWeight: 600, cursor: "pointer", fontSize: "14px", padding: 0, width: "auto", marginTop: 0 }}
+=======
+                    style={{ background: "none", border: "none", color: "#ff4f81", fontWeight: 600, cursor: "pointer", fontSize: "14px", padding: 0 }}
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
                 >
                     {resending ? "Sending..." : "Resend OTP"}
                 </button>
             </div>
         </div>
+<<<<<<< HEAD
         </div>
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
     );
 }
 

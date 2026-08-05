@@ -9,7 +9,10 @@ import VerifyOTP from "./pages/VerifyOTP";
 import Dashboard from "./pages/Dashboard";
 import Contacts from "./pages/Contacts";
 import Journey from "./pages/Journey";
+<<<<<<< HEAD
 import JourneyHistory from "./pages/JourneyHistory";
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 import History from "./pages/History";
 import SOS from "./pages/SOS";
 import SOSHistory from "./pages/SOSHistory";
@@ -60,6 +63,7 @@ function App() {
           }
         />
         <Route
+<<<<<<< HEAD
           path="/journey-history"
           element={
             <ProtectedRoute>
@@ -68,6 +72,8 @@ function App() {
           }
         />
         <Route
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
           path="/sos"
           element={
             <ProtectedRoute>

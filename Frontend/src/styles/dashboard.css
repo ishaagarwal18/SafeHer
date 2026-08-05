@@ -1,4 +1,20 @@
+<<<<<<< HEAD
 /* dashboard.css — dashboard component styles only, no global body/reset rules */
+=======
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+body {
+  background: linear-gradient(135deg, #fff0f5, #ffe4ec, #fff7fa);
+  padding: 30px 20px;
+  color: #333;
+  min-height: 100vh;
+}
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 
 .container {
   max-width: 1350px;

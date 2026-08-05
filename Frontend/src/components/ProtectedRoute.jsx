@@ -5,6 +5,7 @@ function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
 
+<<<<<<< HEAD
   // Check both context and localStorage (handles page refresh)
   const hasUser = isAuthenticated || !!localStorage.getItem("user");
 
@@ -18,6 +19,10 @@ function ProtectedRoute({ children }) {
         replace
       />
     );
+=======
+  if (!isAuthenticated && !localStorage.getItem("user")) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
   }
 
   return children;

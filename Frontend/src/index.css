@@ -19,6 +19,11 @@ body {
 #root {
   width: 100%;
   min-height: 100vh;
+<<<<<<< HEAD
+=======
+  display: flex;
+  flex-direction: column;
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 }
 
 /* Floating background blobs */
