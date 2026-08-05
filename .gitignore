@@ -19,6 +19,8 @@ Frontend/node_modules/
 
 # Build
 Frontend/dist/
+staticfiles/
+Backend/staticfiles/
 
 # OS files
 .DS_Store

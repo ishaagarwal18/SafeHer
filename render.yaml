@@ -1,0 +1,30 @@
+services:
+  # Backend Web Service (Django)
+  - type: web
+    name: safeher-backend
+    env: python
+    region: singapore # Change to your preferred region (e.g. oregon, frankfurt)
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn safeher.wsgi:application"
+    rootDir: Backend
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.4
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+
+  # Frontend Static Site (React / Vite)
+  - type: web
+    name: safeher-frontend
+    env: static
+    rootDir: Frontend
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: "/*"
+        destination: "/index.html"
