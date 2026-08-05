@@ -40,6 +40,10 @@ function Signup() {
     };
 
     return (
+<<<<<<< HEAD
+        <div className="auth-page">
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
         <div className="auth-card">
             <div className="logo">🛡</div>
             <h1>Create Your Account</h1>
@@ -69,6 +73,10 @@ function Signup() {
                 Already have an account? <Link to="/login">Login</Link>
             </div>
         </div>
+<<<<<<< HEAD
+        </div>
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
     );
 }
 

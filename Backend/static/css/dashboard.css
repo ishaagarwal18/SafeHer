@@ -18,6 +18,64 @@ body {
   margin: 0 auto;
 }
 
+<<<<<<< HEAD
+/* USER INFO BAR */
+.user-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+  border-radius: 20px;
+  padding: 14px 24px;
+  margin-bottom: 28px;
+  box-shadow: 0 4px 18px rgba(255, 79, 129, 0.08);
+  border: 1px solid rgba(255, 220, 235, 0.6);
+}
+
+.user-bar__info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.user-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff4f81, #ff85a2);
+  color: white;
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(255, 79, 129, 0.3);
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #222;
+}
+
+.user-meta {
+  font-size: 13px;
+  color: #888;
+}
+
+@media (max-width: 600px) {
+  .user-bar { flex-direction: column; gap: 12px; align-items: flex-start; }
+}
+
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 /* TOP SECTION */
 .top-section {
   text-align: center;

@@ -247,7 +247,46 @@ def _serialize_journey(journey):
 def journey_api(request):
     user = _journey_user(request)
     if request.method == "GET":
+<<<<<<< HEAD
+        if not Journey.objects.exists():
+            now = timezone.now()
+            Journey.objects.create(
+                user=user,
+                source="Downtown Central Bus Stand",
+                destination="Green Park Residential Complex",
+                transport_mode="Bus",
+                status="Completed",
+                expected_duration_minutes=35,
+                start_time=now - timedelta(days=1, hours=2),
+                completed_at=now - timedelta(days=1, hours=1, minutes=25),
+            )
+            Journey.objects.create(
+                user=user,
+                source="Metro Station Gate 2",
+                destination="City Women's Hostel",
+                transport_mode="Walking",
+                status="Completed",
+                expected_duration_minutes=15,
+                start_time=now - timedelta(hours=5),
+                completed_at=now - timedelta(hours=4, minutes=45),
+            )
+            Journey.objects.create(
+                user=user,
+                source="Tech Park Office Tower B",
+                destination="International Airport Terminal 1",
+                transport_mode="Car",
+                status="Active",
+                expected_duration_minutes=45,
+                start_time=now - timedelta(minutes=15),
+            )
+
         journeys = Journey.objects.filter(user=user).order_by("-start_time") if user else Journey.objects.all().order_by("-start_time")
+        if user and not journeys.exists():
+            journeys = Journey.objects.all().order_by("-start_time")
+
+=======
+        journeys = Journey.objects.filter(user=user).order_by("-start_time") if user else Journey.objects.all().order_by("-start_time")
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
         return Response([_serialize_journey(journey) for journey in journeys])
 
     source = request.data.get("source", "").strip()
@@ -382,7 +421,11 @@ def journey_check_in_api(request, journey_id):
         )
 
         return Response({
+<<<<<<< HEAD
+            "message": "🚨 URGENT: Emergency alert email sent to trusted contacts that you are NOT SAFE!",
+=======
             "message": "🚨 URGENT: Emergency alert email sent to trusted contacts and your registered email account that you are NOT SAFE!",
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
             "journey": _serialize_journey(journey),
             "alert_triggered": True,
         }, status=status.HTTP_200_OK)

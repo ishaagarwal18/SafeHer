@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+import JourneyHistory from "./JourneyHistory";
+
+function History() {
+  return <JourneyHistory />;
+=======
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "../styles/features.css";
@@ -105,6 +111,7 @@ function History() {
       </div>
     </div>
   );
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 }
 
 export default History;

@@ -1,7 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+<<<<<<< HEAD
+import { FiAlertTriangle, FiCamera, FiMic, FiVideo, FiShield, FiClock, FiMapPin } from "react-icons/fi";
+import DashboardLayout from "../components/DashboardLayout";
+import { dashboardApi } from "../services/api";
+import "../styles/journey.css";
+import "../styles/features.css";
+=======
 import "../styles/features.css";
 import { dashboardApi } from "../services/api";
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 
 function SOS() {
   // Session & Countdown State
@@ -120,7 +128,10 @@ function SOS() {
         setElapsedSeconds((prev) => prev + 1);
       }, 1000);
 
+<<<<<<< HEAD
+=======
       // Send 15-second continuous GPS updates
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
       trackingIntervalRef.current = setInterval(() => {
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(async (position) => {
@@ -154,7 +165,10 @@ function SOS() {
     };
   }, [activeSession]);
 
+<<<<<<< HEAD
+=======
   // Start SOS Flow
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
   const handleSOSClick = () => {
     if (activeSession) {
       showToast("An SOS emergency session is already active!", "warning");
@@ -189,12 +203,18 @@ function SOS() {
     }
   };
 
+<<<<<<< HEAD
+=======
   // End SOS Session ("I'm Safe")
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
   const handleImSafe = async () => {
     if (!activeSession) return;
     setLoading(true);
 
+<<<<<<< HEAD
+=======
     // Stop Media Recorders if active
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
     if (audioRecording) stopAudioRecording();
     if (videoRecording) stopVideoRecording();
 
@@ -209,7 +229,10 @@ function SOS() {
     }
   };
 
+<<<<<<< HEAD
+=======
   // Photo Capture Logic
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -233,7 +256,10 @@ function SOS() {
       const file = new File([blob], `sos_photo_${Date.now()}.jpg`, { type: "image/jpeg" });
       setPhotoPreview(URL.createObjectURL(blob));
 
+<<<<<<< HEAD
+=======
       // Upload to backend
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
       setPhotoUploading(true);
       const formData = new FormData();
       formData.append("session_id", activeSession.id);
@@ -252,7 +278,10 @@ function SOS() {
     }, "image/jpeg");
   };
 
+<<<<<<< HEAD
+=======
   // Audio Recording Logic
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
   const startAudioRecording = async () => {
     if (!activeSession) return;
     try {
@@ -307,7 +336,10 @@ function SOS() {
     }
   };
 
+<<<<<<< HEAD
+=======
   // Video Recording Logic
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
   const startVideoRecording = async () => {
     if (!activeSession) return;
     try {
@@ -373,6 +405,170 @@ function SOS() {
   };
 
   return (
+<<<<<<< HEAD
+    <DashboardLayout>
+      <div className="journey-page" style={{ margin: 0, padding: 0, background: "transparent" }}>
+        <div className="journey-shell">
+          <header className="journey-heading">
+            <span className="journey-heading__icon" style={{ background: "linear-gradient(135deg, #ff0044, #ff4f81)" }}>
+              <FiAlertTriangle />
+            </span>
+            <div>
+              <p className="eyebrow" style={{ color: "#ff0044" }}>SAFEHER EMERGENCY CONSOLE</p>
+              <h1>Emergency SOS Alert System</h1>
+              <p>Trigger instant emergency alerts, continuous GPS tracking, and media evidence recording.</p>
+            </div>
+          </header>
+
+          {/* 1. Smart SOS Button Section */}
+          {!activeSession ? (
+            <div className="history-card" style={{ textAlign: "center", padding: "40px 20px", marginBottom: "24px" }}>
+              <h2 style={{ fontSize: "24px" }}>Need Immediate Emergency Help?</h2>
+              <p style={{ color: "#64748b", margin: "8px 0 30px" }}>
+                Press the SOS button below. Trusted contacts will be instantly notified with your live GPS location.
+              </p>
+              <div className="sos-button-wrapper">
+                <div className="sos-ripple-ring ring-1" />
+                <div className="sos-ripple-ring ring-2" />
+                <div className="sos-ripple-ring ring-3" />
+                <button type="button" className="sos-smart-btn" onClick={handleSOSClick} disabled={loading}>
+                  <span>🚨</span>
+                  <span>{loading ? "SENDING..." : "SOS"}</span>
+                </button>
+              </div>
+              <div style={{ marginTop: "20px", fontSize: "14px", color: "#64748b" }}>
+                📍 <strong>Current Location:</strong> {locationName || "Fetching GPS coordinates..."}
+              </div>
+            </div>
+          ) : (
+            <div className="history-card active-emergency-card" style={{ marginBottom: "24px" }}>
+              <div className="emergency-status-badge">
+                <span className="live-dot" />
+                <span>SOS ACTIVATED — LIVE EMERGENCY IN PROGRESS</span>
+              </div>
+              <h2>🚨 Emergency Alert Broadcast Active</h2>
+              <p style={{ color: "#475569" }}>
+                Continuous 15-second live GPS tracking is active. Authorities & trusted contacts are monitored.
+              </p>
+              <div className="emergency-metrics-grid">
+                <div className="metric-box">
+                  <label>Emergency Elapsed Duration</label>
+                  <div className="val">{formatTimer(elapsedSeconds)}</div>
+                </div>
+                <div className="metric-box">
+                  <label>Current Time</label>
+                  <div className="val" style={{ fontSize: "16px", color: "#1e293b" }}>
+                    {new Date().toLocaleTimeString()}
+                  </div>
+                </div>
+                <div className="metric-box">
+                  <label>GPS Coordinates</label>
+                  <div className="val" style={{ fontSize: "14px", color: "#0284c7" }}>
+                    {coords.latitude ? `${Number(coords.latitude).toFixed(4)}, ${Number(coords.longitude).toFixed(4)}` : "Tracking..."}
+                  </div>
+                </div>
+              </div>
+              <div style={{ background: "white", padding: "14px 18px", borderRadius: "14px", margin: "10px 0" }}>
+                <strong>📍 Last Saved Address:</strong> {locationName}
+              </div>
+              <button type="button" className="btn-im-safe" onClick={handleImSafe} disabled={loading}>
+                <span>🛡️</span>
+                <span>{loading ? "SAVING..." : "I'M SAFE NOW (End Emergency)"}</span>
+              </button>
+            </div>
+          )}
+
+          {/* Media Recording Tools */}
+          {activeSession && (
+            <div className="history-card" style={{ marginBottom: "24px" }}>
+              <div className="section-title">
+                <div>
+                  <h2>📷 Media Evidence Recording Tools</h2>
+                  <p>Capture photos, audio, or video evidence stored securely with this SOS session.</p>
+                </div>
+              </div>
+
+              <div className="media-tools-grid">
+                <div className="media-tool-card">
+                  <h3>📷 Camera Photo Capture</h3>
+                  <div className="media-preview-container">
+                    {photoPreview ? (
+                      <img src={photoPreview} alt="Captured preview" />
+                    ) : photoStream ? (
+                      <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%" }} />
+                    ) : (
+                      <span style={{ color: "#94a3b8", fontSize: "13px" }}>Camera inactive</span>
+                    )}
+                  </div>
+                  {!photoStream ? (
+                    <button type="button" className="banner-action-btn" onClick={startCamera} style={{ width: "100%", justifyContent: "center" }}>
+                      Start Camera Preview
+                    </button>
+                  ) : (
+                    <button type="button" className="journey-start-button" onClick={capturePhoto} disabled={photoUploading} style={{ width: "100%", margin: 0 }}>
+                      {photoUploading ? "Uploading..." : "Take Snapshot 📸"}
+                    </button>
+                  )}
+                </div>
+
+                <div className="media-tool-card">
+                  <h3>🎙️ Audio Recording</h3>
+                  <div className="media-preview-container" style={{ flexDirection: "column", background: audioRecording ? "#450a0a" : "#1e293b" }}>
+                    <span style={{ fontSize: "36px" }}>{audioRecording ? "🎙️" : "🎧"}</span>
+                    <span style={{ color: "white", fontWeight: "700", marginTop: "8px" }}>
+                      {audioRecording ? `RECORDING: ${formatTimer(audioDuration)}` : "Ready to record"}
+                    </span>
+                  </div>
+                  {!audioRecording ? (
+                    <button type="button" className="journey-start-button" onClick={startAudioRecording} disabled={audioUploading} style={{ width: "100%", margin: 0 }}>
+                      {audioUploading ? "Uploading..." : "Start Audio Recording 🎙️"}
+                    </button>
+                  ) : (
+                    <button type="button" className="banner-action-btn end" onClick={stopAudioRecording} style={{ width: "100%", justifyContent: "center" }}>
+                      Stop & Upload Audio 🛑
+                    </button>
+                  )}
+                </div>
+
+                <div className="media-tool-card">
+                  <h3>📹 Video Clip Recording</h3>
+                  <div className="media-preview-container" style={{ background: videoRecording ? "#450a0a" : "#1e293b" }}>
+                    {videoRecording ? (
+                      <div style={{ textAlign: "center", color: "white" }}>
+                        <span style={{ fontSize: "32px" }}>📹</span>
+                        <div style={{ fontWeight: "700", marginTop: "4px" }}>RECORDING: {formatTimer(videoDuration)}</div>
+                      </div>
+                    ) : (
+                      <span style={{ color: "#94a3b8", fontSize: "13px" }}>Video camera ready</span>
+                    )}
+                  </div>
+                  {!videoRecording ? (
+                    <button type="button" className="journey-start-button" onClick={startVideoRecording} disabled={videoUploading} style={{ width: "100%", margin: 0 }}>
+                      {videoUploading ? "Uploading..." : "Start Video Recording 📹"}
+                    </button>
+                  ) : (
+                    <button type="button" className="banner-action-btn end" onClick={stopVideoRecording} style={{ width: "100%", justifyContent: "center" }}>
+                      Stop & Upload Video 🛑
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: "14px", marginTop: "24px", flexWrap: "wrap", alignItems: "center" }}>
+            <Link to="/sos/history" className="banner-action-btn" style={{ textDecoration: "none", padding: "12px 20px" }}>
+              📜 View SOS Emergency Logs
+            </Link>
+            <Link to="/dashboard" className="back-to-dashboard-btn">
+              ← Back to Dashboard
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* 5-Second Countdown Modal */}
+=======
     <>
       <div className="container">
         <h1 className="page-title">🚨 Emergency SOS Console</h1>
@@ -578,16 +774,22 @@ function SOS() {
       </div>
 
       {/* 2 & 3. 5-Second Countdown Modal */}
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
       {showCountdown && (
         <div className="sos-modal-overlay">
           <div className="sos-modal-content">
             <h2 style={{ color: "#ff0044", fontSize: "24px" }}>🚨 CONFIRM SOS ALERT</h2>
+<<<<<<< HEAD
+            <p style={{ color: "#64748b", marginTop: "8px", fontSize: "15px" }}>Emergency alert will be sent in...</p>
+            <div className="sos-countdown-circle">{countdown}</div>
+=======
             <p style={{ color: "#64748b", marginTop: "8px", fontSize: "15px" }}>
               Emergency alert will be sent in...
             </p>
 
             <div className="sos-countdown-circle">{countdown}</div>
 
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
             <div className="sos-modal-actions">
               <button type="button" className="btn-cancel-sos" onClick={cancelCountdown}>
                 Cancel ✖
@@ -600,20 +802,32 @@ function SOS() {
         </div>
       )}
 
+<<<<<<< HEAD
+      {/* Toast */}
+=======
       {/* Toast Notification */}
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
       {toast && (
         <div
           className="sos-toast"
           style={{
+<<<<<<< HEAD
+            borderLeft: `5px solid ${toast.type === "error" ? "#ff0044" : toast.type === "success" ? "#10b981" : "#0284c7"}`,
+=======
             borderLeft: `5px solid ${
               toast.type === "error" ? "#ff0044" : toast.type === "success" ? "#10b981" : "#0284c7"
             }`,
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
           }}
         >
           {toast.msg}
         </div>
       )}
+<<<<<<< HEAD
+    </DashboardLayout>
+=======
     </>
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
   );
 }
 

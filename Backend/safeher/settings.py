@@ -144,10 +144,17 @@ EMAIL_HOST_USER='jdksbdwhdjd@gmail.com'
 EMAIL_HOST_PASSWORD='xsuipikrtqtwxcds'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+<<<<<<< HEAD
+# Twilio SMS config — set these in your .env file
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
+TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER", "")  # e.g. +1xxxxxxxxxx
+=======
 # Twilio SMS config — replace with your actual credentials
 TWILIO_ACCOUNT_SID = 'your_twilio_account_sid'
 TWILIO_AUTH_TOKEN = 'your_twilio_auth_token'
 TWILIO_PHONE_NUMBER = '+1xxxxxxxxxx'  # your Twilio number
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True

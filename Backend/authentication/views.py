@@ -18,6 +18,13 @@ OTP_EXPIRY_MINUTES = 10
 def home(request):
     return render(request, 'index.html')
 
+<<<<<<< HEAD
+def logout_view(request):
+    request.session.flush()
+    return redirect("/login/")
+
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 def signup_page(request):
     return render(request, "signup.html")
 
@@ -98,10 +105,19 @@ def send_email_otp(request):
 
 def login_page(request):
 
+<<<<<<< HEAD
+    next_url = request.GET.get("next", "/dashboard/")
+
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
     if request.method == "POST":
 
         email = request.POST.get("email")
         password = request.POST.get("password")
+<<<<<<< HEAD
+        next_url = request.POST.get("next", "/dashboard/")
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 
         try:
 
@@ -111,14 +127,22 @@ def login_page(request):
 
                 request.session["user_id"] = user.id
 
+<<<<<<< HEAD
+                return redirect(next_url)
+=======
                 return redirect("/dashboard/")
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 
             else:
 
                 return render(
                     request,
                     "login.html",
+<<<<<<< HEAD
+                    {"error": "Invalid Password", "next": next_url}
+=======
                     {"error": "Invalid Password"}
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
                 )
 
         except UserProfile.DoesNotExist:
@@ -126,10 +150,17 @@ def login_page(request):
             return render(
                 request,
                 "login.html",
+<<<<<<< HEAD
+                {"error": "Email not found", "next": next_url}
+            )
+
+    return render(request, "login.html", {"next": next_url})
+=======
                 {"error": "Email not found"}
             )
 
     return render(request, "login.html")
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 
 
 def contacts_page(request):

@@ -52,6 +52,68 @@ def _relationship_message(relationship):
     return mapping.get(r, "Someone you know")
 
 
+<<<<<<< HEAD
+def _send_twilio_sms(trusted_contacts, user_name="", location="", latitude="", longitude=""):
+    """Send a real SMS via Twilio to every trusted contact that has a phone number."""
+    account_sid = settings.TWILIO_ACCOUNT_SID
+    auth_token = settings.TWILIO_AUTH_TOKEN
+    from_number = settings.TWILIO_PHONE_NUMBER
+
+    if not all([account_sid, auth_token, from_number]):
+        print("Twilio credentials not configured — SMS skipped.")
+        return
+
+    try:
+        from twilio.rest import Client
+        from twilio.base.exceptions import TwilioRestException
+    except ImportError:
+        print("twilio package not installed — run: pip install twilio")
+        return
+
+    client = Client(account_sid, auth_token)
+
+    maps_link = (
+        f"https://www.google.com/maps?q={latitude},{longitude}"
+        if latitude and longitude
+        else ""
+    )
+
+    for contact in trusted_contacts:
+        raw_phone = (contact.phone_number or "").strip()
+        if not raw_phone:
+            print(f"No phone number for {contact.contact_name} — SMS skipped")
+            continue
+
+        # Normalise to E.164 format if not already prefixed
+        if not raw_phone.startswith("+"):
+            # Default to Indian numbers (+91) — change prefix as needed
+            raw_phone = "+91" + raw_phone.lstrip("0")
+
+        name_part = f" ({user_name})" if user_name else ""
+        body = (
+            f"🚨 SOS ALERT — {contact.contact_name}, "
+            f"someone close to you{name_part} needs immediate help!\n"
+            f"📍 Location: {location or 'Unknown'}"
+        )
+        if maps_link:
+            body += f"\n🗺 Maps: {maps_link}"
+        body += "\nPlease reach out or call 112 immediately."
+
+        try:
+            message = client.messages.create(
+                body=body,
+                from_=from_number,
+                to=raw_phone,
+            )
+            print(f"SMS sent to {contact.contact_name} ({raw_phone}): SID={message.sid}")
+        except TwilioRestException as e:
+            print(f"Twilio error for {contact.contact_name} ({raw_phone}): {e}")
+        except Exception as e:
+            print(f"Unexpected SMS error for {contact.contact_name}: {e}")
+
+
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 def _send_sos_sms(location, trusted_contacts, user_name="", latitude="", longitude=""):
     """Send SOS alert HTML email to all trusted contacts that have an email address."""
     from django.core.mail import EmailMultiAlternatives
@@ -151,6 +213,12 @@ def _send_sos_sms(location, trusted_contacts, user_name="", latitude="", longitu
         except Exception as e:
             print(f"SOS email error for {contact.contact_name}: {e}")
 
+<<<<<<< HEAD
+    # Also send SMS to ALL trusted contacts (including those without email)
+    _send_twilio_sms(trusted_contacts, user_name, location, latitude, longitude)
+
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 
 def _send_safe_email(trusted_contacts, user_name="", duration_str="", location=""):
     """Send an HTML email notification to trusted contacts when the user marks themselves as safe."""
@@ -215,6 +283,55 @@ def _send_safe_email(trusted_contacts, user_name="", duration_str="", location="
         except Exception as e:
             print(f"Safe email error for {contact.contact_name}: {e}")
 
+<<<<<<< HEAD
+    # Also send "safe" SMS to all trusted contacts
+    _send_safe_sms(trusted_contacts, user_name, location)
+
+
+def _send_safe_sms(trusted_contacts, user_name="", location=""):
+    """Send a brief SMS to trusted contacts confirming the user is safe."""
+    account_sid = settings.TWILIO_ACCOUNT_SID
+    auth_token = settings.TWILIO_AUTH_TOKEN
+    from_number = settings.TWILIO_PHONE_NUMBER
+
+    if not all([account_sid, auth_token, from_number]):
+        print("Twilio credentials not configured — safe SMS skipped.")
+        return
+
+    try:
+        from twilio.rest import Client
+        from twilio.base.exceptions import TwilioRestException
+    except ImportError:
+        print("twilio package not installed — run: pip install twilio")
+        return
+
+    client = Client(account_sid, auth_token)
+
+    for contact in trusted_contacts:
+        raw_phone = (contact.phone_number or "").strip()
+        if not raw_phone:
+            continue
+
+        if not raw_phone.startswith("+"):
+            raw_phone = "+91" + raw_phone.lstrip("0")
+
+        name_part = f" ({user_name})" if user_name else ""
+        body = (
+            f"✅ SAFE CONFIRMATION — {contact.contact_name}, "
+            f"the person{name_part} has marked themselves SAFE. "
+            f"Emergency resolved. — SafeHer"
+        )
+
+        try:
+            message = client.messages.create(body=body, from_=from_number, to=raw_phone)
+            print(f"Safe SMS sent to {contact.contact_name} ({raw_phone}): SID={message.sid}")
+        except TwilioRestException as e:
+            print(f"Twilio error (safe) for {contact.contact_name} ({raw_phone}): {e}")
+        except Exception as e:
+            print(f"Unexpected safe SMS error for {contact.contact_name}: {e}")
+
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 
 def add_trusted_contact(request):
 
@@ -243,20 +360,54 @@ def delete_contact(request):
     return redirect("/dashboard/contacts/")
 
 
+<<<<<<< HEAD
+def _login_required(request):
+    """Return the logged-in UserProfile or None. None means redirect to login."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return None
+    try:
+        return UserProfile.objects.get(id=user_id)
+    except UserProfile.DoesNotExist:
+        return None
+
+
+def dashboard_page(request):
+    user = _login_required(request)
+    if not user:
+        return redirect("/login/?next=/dashboard/")
+
+    journey_count = Journey.objects.filter(user=user).count()
+    contact_count = EmergencyContact.objects.filter(user=user).count()
+    sos_count = SOSAlert.objects.count()
+    trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True)
+=======
 def dashboard_page(request):
     journey_count = Journey.objects.count()
     contact_count = EmergencyContact.objects.count()
     sos_count = SOSAlert.objects.count()
     trusted_contacts = EmergencyContact.objects.filter(is_trusted=True)
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
     return render(request, "dashboard.html", {
         "journey_count": journey_count,
         "contact_count": contact_count,
         "sos_count": sos_count,
         "contact": trusted_contacts,
+<<<<<<< HEAD
+        "user": user,
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
     })
 
 
 def sos_page(request):
+<<<<<<< HEAD
+    user = _login_required(request)
+    if not user:
+        return redirect("/login/?next=/dashboard/sos/")
+
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
     if request.method == "POST":
         location = request.POST.get("location", "")
         latitude = request.POST.get("latitude", "")
@@ -267,6 +418,20 @@ def sos_page(request):
             latitude=latitude,
             longitude=longitude,
         )
+<<<<<<< HEAD
+        trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True)
+        _send_sos_sms(location, trusted_contacts, user.name, latitude, longitude)
+
+    alerts = SOSAlert.objects.all().order_by("-id")
+    return render(request, "sos.html", {"alerts": alerts, "user": user})
+
+
+def contacts_page(request):
+    user = _login_required(request)
+    if not user:
+        return redirect("/login/?next=/dashboard/contacts/")
+
+=======
         # Send email to all trusted contacts
         trusted_contacts = EmergencyContact.objects.filter(is_trusted=True)
         user = _get_current_user(request)
@@ -279,6 +444,7 @@ def sos_page(request):
 
 def contacts_page(request):
     user = _get_current_user(request)
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
     error = None
     success = None
 
@@ -294,8 +460,11 @@ def contacts_page(request):
             error = "Phone number must be exactly 10 digits."
         elif email and "@" not in email:
             error = "Please enter a valid email address."
+<<<<<<< HEAD
+=======
         elif user is None:
             error = "No user account found. Please register first."
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
         else:
             EmergencyContact.objects.create(
                 user=user,
@@ -306,6 +475,11 @@ def contacts_page(request):
             )
             success = f"{name} added successfully."
 
+<<<<<<< HEAD
+    all_contacts = EmergencyContact.objects.filter(user=user)
+    trusted_contacts = all_contacts.filter(is_trusted=True)
+    regular_contacts = all_contacts.filter(is_trusted=False)
+=======
     if user:
         all_contacts = EmergencyContact.objects.filter(user=user)
         trusted_contacts = all_contacts.filter(is_trusted=True)
@@ -313,16 +487,28 @@ def contacts_page(request):
     else:
         trusted_contacts = EmergencyContact.objects.none()
         regular_contacts = EmergencyContact.objects.none()
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 
     return render(request, "contacts.html", {
         "contacts": regular_contacts,
         "trusted_contacts": trusted_contacts,
         "error": error,
         "success": success,
+<<<<<<< HEAD
+        "user": user,
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
     })
 
 
 def journey_page(request):
+<<<<<<< HEAD
+    user = _login_required(request)
+    if not user:
+        return redirect("/login/?next=/dashboard/journey/")
+
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
     unsafe_warning = None
 
     if request.method == "POST":
@@ -356,10 +542,24 @@ def journey_page(request):
 
 
 def places_page(request):
+<<<<<<< HEAD
+    user = _login_required(request)
+    if not user:
+        return redirect("/login/?next=/dashboard/places/")
+    return render(request, 'safe_places.html', {"user": user})
+
+
+def reports_page(request):
+    user = _login_required(request)
+    if not user:
+        return redirect("/login/?next=/dashboard/reports/")
+
+=======
     return render(request, 'safe_places.html')
 
 
 def reports_page(request):
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
     if request.method == "POST":
         UnsafeReport.objects.create(
             area_name=request.POST.get("area", ""),
@@ -367,8 +567,19 @@ def reports_page(request):
             description=request.POST.get("description", ""),
         )
     reports = UnsafeReport.objects.all().order_by("-id")
+<<<<<<< HEAD
+    return render(request, 'report.html', {"reports": reports, "user": user})
+
+
+def history_page(request):
+    user = _login_required(request)
+    if not user:
+        return redirect("/login/?next=/dashboard/history/")
+    return render(request, 'journey_status.html', {"user": user})
+=======
     return render(request, 'report.html', {"reports": reports})
 
 
 def history_page(request):
     return render(request, 'journey_status.html')
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d

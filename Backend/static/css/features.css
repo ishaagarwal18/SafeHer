@@ -250,6 +250,8 @@ tr:last-child td {
   border-radius: 12px;
   font-size: 12px;
   font-weight: 600;
+<<<<<<< HEAD
+=======
 }
 
 .contact-btn {
@@ -342,4 +344,5 @@ tr:last-child td {
 .back-dashboard-btn:active,
 .back-link:active {
   transform: translateX(-2px) scale(0.98);
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 }

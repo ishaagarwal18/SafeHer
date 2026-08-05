@@ -5,6 +5,10 @@ from . import api_views
 urlpatterns = [
     path('', views.home, name='home'),
     path('login/', views.login_page, name='login'),
+<<<<<<< HEAD
+    path('logout/', views.logout_view, name='logout'),
+=======
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
     path('signup/', views.signup_page, name='signup'),
     path("send-otp/", views.send_email_otp, name="send_otp"),
     path("verify-email/", views.verify_email, name="verify_email"),

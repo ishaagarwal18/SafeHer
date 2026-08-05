@@ -133,9 +133,15 @@
           <form method="POST" action="/dashboard/contacts/remove_trusted/">
             {% csrf_token %}
             <input type="hidden" name="contact_id" value="{{ contact.id }}">
+<<<<<<< HEAD
+            <button type="submit" class="btn btn-small btn-danger"
+              onclick="return confirm('Remove {{ contact.contact_name }} from trusted contacts?')">
+              Remove
+=======
             <button type="submit" class="contact-btn remove-trust"
               onclick="return confirm('Remove {{ contact.contact_name }} from trusted contacts?')">
               ✕ Remove Trust
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
             </button>
           </form>
         </td>
@@ -170,7 +176,11 @@
           <form method="POST" action="/dashboard/add_trusted_contact/">
             {% csrf_token %}
             <input type="hidden" name="contact_id" value="{{ contact.id }}">
+<<<<<<< HEAD
+            <button type="submit" class="btn btn-small"
+=======
             <button type="submit" class="contact-btn mark-trust"
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
               onclick="return confirm('Mark {{ contact.contact_name }} as trusted? They will receive SOS alerts.')">
               ⭐ Mark Trusted
             </button>
@@ -178,9 +188,15 @@
           <form method="POST" action="/dashboard/contacts/delete/">
             {% csrf_token %}
             <input type="hidden" name="contact_id" value="{{ contact.id }}">
+<<<<<<< HEAD
+            <button type="submit" class="btn btn-small btn-danger"
+              onclick="return confirm('Delete {{ contact.contact_name }}?')">
+              Delete
+=======
             <button type="submit" class="contact-btn delete"
               onclick="return confirm('Delete {{ contact.contact_name }}?')">
               🗑 Delete
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
             </button>
           </form>
         </td>
@@ -196,7 +212,11 @@
 </div>
 
 <div class="nav-links" style="text-align:center;margin:20px 0;">
+<<<<<<< HEAD
+  <a href="/dashboard/" class="btn">← Back to Dashboard</a>
+=======
   <a href="/dashboard/" class="back-dashboard-btn">← Back to Dashboard</a>
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 </div>
 
 </body>

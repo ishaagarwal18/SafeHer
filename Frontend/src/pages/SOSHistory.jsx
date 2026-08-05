@@ -1,7 +1,16 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+<<<<<<< HEAD
+import { FiClock, FiSearch, FiCalendar, FiRotateCcw, FiEye } from "react-icons/fi";
+import DashboardLayout from "../components/DashboardLayout";
+import Loader from "../components/Loader";
+import { dashboardApi } from "../services/api";
+import "../styles/journey.css";
+import "../styles/features.css";
+=======
 import "../styles/features.css";
 import { dashboardApi } from "../services/api";
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 
 function SOSHistory() {
   const [sessions, setSessions] = useState([]);
@@ -57,6 +66,63 @@ function SOSHistory() {
   };
 
   return (
+<<<<<<< HEAD
+    <DashboardLayout>
+      <div className="journey-page" style={{ margin: 0, padding: 0, background: "transparent" }}>
+        <div className="journey-shell">
+          <header className="journey-heading">
+            <span className="journey-heading__icon">
+              <FiClock />
+            </span>
+            <div>
+              <p className="eyebrow">SAFEHER AUDIT LOG</p>
+              <h1>SOS Emergency History</h1>
+              <p>Review past emergency alerts, recorded GPS coordinates, audio/video clips, and photos.</p>
+            </div>
+          </header>
+
+          {/* Filters Card */}
+          <div className="history-card" style={{ marginBottom: "24px" }}>
+            <div className="section-title" style={{ marginBottom: "16px" }}>
+              <div>
+                <h2>Filter Emergency Logs</h2>
+                <p>Filter by location keyword or date range.</p>
+              </div>
+            </div>
+
+            <div className="history-filters">
+              <label className="search-field">
+                <FiSearch />
+                <input
+                  type="text"
+                  placeholder="Search location or status..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </label>
+              <label>
+                <FiCalendar />
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </label>
+              <label>
+                <FiCalendar />
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </label>
+            </div>
+
+            <div style={{ marginTop: "14px", display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                className="map-button"
+=======
     <>
       <div className="container">
         <h1 className="page-title">📜 SOS Emergency History</h1>
@@ -103,11 +169,128 @@ function SOSHistory() {
               <button
                 type="button"
                 className="btn-secondary"
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
                 onClick={() => {
                   setQuery("");
                   setStartDate("");
                   setEndDate("");
                 }}
+<<<<<<< HEAD
+              >
+                <FiRotateCcw /> Reset Filters
+              </button>
+            </div>
+          </div>
+
+          {/* History Table */}
+          <div className="history-card" style={{ marginBottom: "24px" }}>
+            <div className="section-title" style={{ marginBottom: "16px" }}>
+              <div>
+                <h2>Emergency Logs ({totalCount})</h2>
+                <p>Recorded emergency sessions and media attachments.</p>
+              </div>
+              <Link to="/sos" className="banner-action-btn" style={{ textDecoration: "none" }}>
+                🚨 Trigger SOS
+              </Link>
+            </div>
+
+            {loading ? (
+              <div style={{ padding: "40px 0" }}>
+                <Loader message="Loading emergency logs..." />
+              </div>
+            ) : sessions.length > 0 ? (
+              <div className="journey-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Start Time</th>
+                      <th>End Time</th>
+                      <th>Duration</th>
+                      <th>Status</th>
+                      <th>Last Known Location</th>
+                      <th>Media / Log</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sessions.map((s) => (
+                      <tr key={s.id}>
+                        <td>
+                          <strong>{new Date(s.start_time).toLocaleDateString()}</strong>
+                        </td>
+                        <td>{new Date(s.start_time).toLocaleTimeString()}</td>
+                        <td>{s.end_time ? new Date(s.end_time).toLocaleTimeString() : "Ongoing"}</td>
+                        <td>{formatDuration(s.duration_seconds)}</td>
+                        <td>
+                          <span className={`journey-status ${s.status === "Active" ? "alert" : "completed"}`}>
+                            {s.status}
+                          </span>
+                        </td>
+                        <td style={{ maxWidth: "220px", wordBreak: "break-word" }}>
+                          {s.last_known_location || s.initial_location || "Location not recorded"}
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="map-button"
+                            onClick={() => setSelectedSession(s)}
+                          >
+                            <FiEye /> Details
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="empty-journeys">
+                <FiSearch />
+                <strong>No emergency logs found</strong>
+                <span>No emergency sessions match your search or date criteria.</span>
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  gap: "12px",
+                  marginTop: "24px",
+                }}
+              >
+                <button
+                  type="button"
+                  className="map-button"
+                  disabled={page <= 1}
+                  onClick={() => handlePageChange(page - 1)}
+                >
+                  ← Previous
+                </button>
+                <span style={{ fontSize: "14px", fontWeight: "600", color: "#64748b" }}>
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="map-button"
+                  disabled={page >= totalPages}
+                  onClick={() => handlePageChange(page + 1)}
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginTop: "28px" }}>
+            <Link to="/dashboard" className="back-to-dashboard-btn">
+              ← Back to Dashboard
+            </Link>
+          </div>
+=======
                 style={{ padding: "12px 18px", width: "100%", borderRadius: "12px", cursor: "pointer" }}
               >
                 Reset Filters
@@ -219,6 +402,7 @@ function SOSHistory() {
           <Link to="/dashboard" className="back-dashboard-btn">
             ← Back to Dashboard
           </Link>
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
         </div>
       </div>
 
@@ -299,7 +483,11 @@ function SOSHistory() {
           </div>
         </div>
       )}
+<<<<<<< HEAD
+    </DashboardLayout>
+=======
     </>
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
   );
 }
 

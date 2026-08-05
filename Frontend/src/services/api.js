@@ -6,10 +6,15 @@ function getCookie(name) {
     return match ? decodeURIComponent(match[2]) : null;
 }
 
+<<<<<<< HEAD
+const api = axios.create({
+    baseURL: "/api/",
+=======
 const hostname = typeof window !== "undefined" && window.location.hostname ? window.location.hostname : "127.0.0.1";
 
 const api = axios.create({
     baseURL: `http://${hostname}:8000/api/`,
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
     withCredentials: true,
 });
 
@@ -24,7 +29,11 @@ api.interceptors.request.use((config) => {
 
 // Separate instance for endpoints under /dashboard/
 export const dashboardApi = axios.create({
+<<<<<<< HEAD
+    baseURL: "/dashboard/",
+=======
     baseURL: `http://${hostname}:8000/dashboard/`,
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
     withCredentials: true,
 });
 
@@ -37,4 +46,7 @@ dashboardApi.interceptors.request.use((config) => {
 });
 
 export default api;
+<<<<<<< HEAD
+=======
 
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d

@@ -1,3 +1,6 @@
+<<<<<<< HEAD
+/* dashboard.css — dashboard component styles only, no global body/reset rules */
+=======
 * {
   margin: 0;
   padding: 0;
@@ -11,6 +14,7 @@ body {
   color: #333;
   min-height: 100vh;
 }
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 
 .container {
   max-width: 1350px;

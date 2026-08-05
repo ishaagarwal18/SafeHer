@@ -60,9 +60,16 @@ body { font-family: Poppins, "Segoe UI", sans-serif; color: var(--ink); }
 .input-with-action { position: relative; }
 .input-with-action input { padding-right: 75px; }
 .btn-locate-small {
+<<<<<<< HEAD
+  position: absolute; top: 50%; right: 8px; transform: translateY(-50%); border: 0;
+  background: #fff0f5; color: var(--pink-dark); border-radius: 6px;
+  padding: 3px 7px; font-size: 10px; font-weight: 700; cursor: pointer; line-height: 1.2;
+  white-space: nowrap;
+=======
   position: absolute; top: 8px; right: 8px; border: 0;
   background: #fff0f5; color: var(--pink-dark); border-radius: 8px;
   padding: 5px 8px; font-size: 11px; font-weight: 700; cursor: pointer; line-height: 1.2;
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 }
 .btn-locate-small:hover { background: #ffe4ee; }
 .route-line { height: 18px; border-left: 2px dashed #ff9ab7; margin: 4px 0 4px 9px; }
@@ -174,6 +181,10 @@ body { font-family: Poppins, "Segoe UI", sans-serif; color: var(--ink); }
 .empty-journeys strong { color: var(--ink) !important; font-size: 14px; }
 .empty-journeys span { font-size: 12px; }
 
+<<<<<<< HEAD
+.back-link { display: inline-block; margin-top: 20px; background: linear-gradient(135deg, #ff4f81, #ff85a2); color: white; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 22px; border-radius: 12px; box-shadow: 0 6px 16px rgba(255,79,129,.25); transition: transform .25s ease, box-shadow .25s ease; }
+.back-link:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,79,129,.35); }
+=======
 .back-dashboard-btn,
 .back-link {
   display: inline-flex;
@@ -209,6 +220,7 @@ body { font-family: Poppins, "Segoe UI", sans-serif; color: var(--ink); }
   transform: translateX(-2px) scale(0.98);
 }
 
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 
 /* Safety check-in modal */
 .checkin-overlay {

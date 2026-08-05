@@ -3,17 +3,40 @@
 <!DOCTYPE html>
 <html>
 <head>
+<<<<<<< HEAD
+    <title>SafeHer Dashboard</title>
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+=======
 
     <title>SafeHer Dashboard</title>
 
     <link rel="stylesheet"
     href="{% static 'css/dashboard.css' %}">
 
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
 </head>
 
 <body>
 
 <div class="container">
+<<<<<<< HEAD
+
+    <!-- User info bar -->
+    <div class="user-bar">
+        <div class="user-bar__info">
+            <div class="user-avatar">{{ user.name|first|upper }}</div>
+            <div class="user-details">
+                <span class="user-name">{{ user.name }}</span>
+                <span class="user-meta">{{ user.email }} &nbsp;·&nbsp; 📞 {{ user.phone }}</span>
+            </div>
+        </div>
+        <a href="/logout/" class="logout-btn">Logout</a>
+    </div>
+
+    <div class="top-section">
+        <h1>Welcome to SafeHer 💖</h1>
+        <p>Stay protected and connected.</p>
+=======
     <div class="top-section">
         <h1>Welcome to SafeHer 💖</h1>
         <p>Stay protected and connected.</p>
@@ -21,6 +44,7 @@
         Logout
     </a>
 
+>>>>>>> dceb0a1555706ab72984b56d01e3aa17a60ebe8d
     </div>
 <div class="stats">
 
