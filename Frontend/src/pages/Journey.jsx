@@ -221,7 +221,7 @@ function Journey() {
     try {
       const res = await dashboardApi.post(`api/journey/${activeJourney.id}/check-in/`, { response: "not_safe" });
       setShowCheckInModal(false);
-      setNoticeMsg("🚨 URGENT: Emergency alert email sent to trusted contacts that you are NOT SAFE!");
+      setNoticeMsg("🚨 URGENT: Emergency alert email sent to trusted contacts and your registered email account that you are NOT SAFE!");
       fetchJourneys();
     } catch {
       setError("Failed to send Not Safe alert.");
@@ -631,8 +631,8 @@ function Journey() {
           </div>
         </section>
 
-        <Link to="/dashboard" className="back-link">
-          ← Back to dashboard
+        <Link to="/dashboard" className="back-dashboard-btn">
+          ← Back to Dashboard
         </Link>
       </div>
     </main>

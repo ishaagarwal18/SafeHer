@@ -216,7 +216,7 @@ function SOSHistory() {
         </div>
 
         <div className="nav-links" style={{ textAlign: "center", margin: "20px 0" }}>
-          <Link to="/dashboard" className="btn">
+          <Link to="/dashboard" className="back-dashboard-btn">
             ← Back to Dashboard
           </Link>
         </div>

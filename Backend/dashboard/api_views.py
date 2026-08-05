@@ -382,7 +382,7 @@ def journey_check_in_api(request, journey_id):
         )
 
         return Response({
-            "message": "🚨 URGENT: Emergency alert email sent to trusted contacts that you are NOT SAFE!",
+            "message": "🚨 URGENT: Emergency alert email sent to trusted contacts and your registered email account that you are NOT SAFE!",
             "journey": _serialize_journey(journey),
             "alert_triggered": True,
         }, status=status.HTTP_200_OK)

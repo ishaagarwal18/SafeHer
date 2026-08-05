@@ -186,11 +186,10 @@ function Contacts() {
                     <td>
                       <button
                         type="button"
-                        className="btn"
-                        style={{ background: "linear-gradient(135deg,#ff8585,#ffb3b3)" }}
+                        className="contact-btn remove-trust"
                         onClick={() => toggleTrust(contact.id)}
                       >
-                        Remove Trust
+                        ✕ Remove Trust
                       </button>
                     </td>
                   </tr>
@@ -230,22 +229,22 @@ function Contacts() {
                     <td>{contact.email || "—"}</td>
                     <td>{contact.relationship}</td>
                     <td>
-                      <button
-                        type="button"
-                        className="btn"
-                        style={{ marginRight: "8px" }}
-                        onClick={() => toggleTrust(contact.id)}
-                      >
-                        Mark Trusted ⭐
-                      </button>
-                      <button
-                        type="button"
-                        className="btn"
-                        style={{ background: "linear-gradient(135deg,#ff8585,#ffb3b3)" }}
-                        onClick={() => deleteContact(contact.id, contact.contact_name)}
-                      >
-                        Delete
-                      </button>
+                      <div className="contact-actions">
+                        <button
+                          type="button"
+                          className="contact-btn mark-trust"
+                          onClick={() => toggleTrust(contact.id)}
+                        >
+                          ⭐ Mark Trusted
+                        </button>
+                        <button
+                          type="button"
+                          className="contact-btn delete"
+                          onClick={() => deleteContact(contact.id, contact.contact_name)}
+                        >
+                          🗑 Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -262,7 +261,7 @@ function Contacts() {
       </div>
 
       <div className="nav-links" style={{ textAlign: "center", margin: "20px 0" }}>
-        <Link to="/dashboard" className="btn">
+        <Link to="/dashboard" className="back-dashboard-btn">
           ← Back to Dashboard
         </Link>
       </div>
