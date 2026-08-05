@@ -135,9 +135,27 @@ function Journey() {
   const locate = () => {
     if (!navigator.geolocation) return setError("Location services are not supported by this browser.");
     navigator.geolocation.getCurrentPosition(
-      ({ coords }) =>
-        setForm((current) => ({ ...current, source: `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}` })),
-      () => setError("We could not access your GPS location. Please enter it manually.")
+      async ({ coords }) => {
+        const { latitude, longitude } = coords;
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
+            { headers: { "Accept-Language": "en" } }
+          );
+          const data = await res.json();
+          // Build a short readable place name: neighbourhood/suburb + city
+          const a = data.address || {};
+          const place =
+            a.suburb || a.neighbourhood || a.village || a.town || a.city_district || a.county || "";
+          const city  = a.city || a.town || a.county || "";
+          const label = [place, city].filter(Boolean).join(", ") || data.display_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          setForm((f) => ({ ...f, source: label }));
+        } catch {
+          // fallback to coords if reverse geocode fails
+          setForm((f) => ({ ...f, source: `${latitude.toFixed(5)}, ${longitude.toFixed(5)}` }));
+        }
+      },
+      () => setError("Could not access GPS location. Please enter it manually.")
     );
   };
 
@@ -359,22 +377,20 @@ function Journey() {
               </p>
             </div>
 
-            <div style={{ display: "flex", gap: "10px" }}>
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
               <button
                 type="button"
-                className="btn-locate-small"
+                className="banner-action-btn"
                 onClick={() => setShowCheckInModal(true)}
-                style={{ position: "static", padding: "10px 16px", fontSize: "13px", background: "#ff4f81", color: "white" }}
               >
                 🛡️ Test Safety Check
               </button>
               <button
                 type="button"
-                className="complete-button"
-                style={{ background: "#e0f2fe", color: "#0369a1", borderColor: "#bae6fd", padding: "10px 16px", fontSize: "13px" }}
+                className="banner-action-btn end"
                 onClick={() => markCompleted(activeJourney.id)}
               >
-                End Journey
+                ✓ End Journey
               </button>
             </div>
           </div>
@@ -429,12 +445,13 @@ function Journey() {
                     name="source"
                     value={form.source}
                     onChange={change}
-                    placeholder="Enter starting location manually"
+                    placeholder="Enter starting location"
                     required
                   />
-                  <button type="button" onClick={locate} className="btn-locate-small" title="Use GPS location">
+                  {/* <button type="button" onClick={locate} className="btn-locate-small">
                     📍 GPS
-                  </button>
+                  </button> */}
+                  <button type="button" onClick={locate}>📍 GPS</button>
                 </div>
               </label>
 
