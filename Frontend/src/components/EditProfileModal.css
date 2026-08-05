@@ -1,0 +1,220 @@
+/* ── Edit Profile Modal Styles ── */
+.epm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: epm-fade 0.2s ease-out;
+}
+
+@keyframes epm-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.epm-card {
+  background: #ffffff;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(255, 182, 193, 0.4);
+  padding: 28px;
+  position: relative;
+  animation: epm-slide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes epm-slide {
+  from { opacity: 0; transform: scale(0.95) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.epm-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.epm-header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.epm-icon {
+  font-size: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fff0f5, #ffe4ec);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.epm-header-title h3 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.epm-header-title p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.epm-close-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.epm-close-btn:hover {
+  background: #ffe4ec;
+  color: #ff4f81;
+  border-color: #ffb6c1;
+}
+
+.epm-alert-success {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: epm-fade 0.2s ease;
+}
+
+.epm-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.epm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.epm-field label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.epm-field input,
+.epm-field textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  font-size: 14px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #f8fafc;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.epm-field input:focus,
+.epm-field textarea:focus {
+  outline: none;
+  background: #ffffff;
+  border-color: #ff4f81;
+  box-shadow: 0 0 0 3.5px rgba(255, 79, 129, 0.15);
+}
+
+.epm-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.epm-cancel-btn {
+  flex: 1;
+  padding: 11px;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.epm-cancel-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.epm-save-btn {
+  flex: 1.5;
+  padding: 11px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #ff4f81, #e93870);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(255, 79, 129, 0.35);
+  transition: all 0.2s ease;
+}
+
+.epm-save-btn:hover {
+  background: linear-gradient(135deg, #e93870, #d8235b);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(255, 79, 129, 0.45);
+}
+
+.epm-footer {
+  text-align: center;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.epm-link {
+  color: #ff4f81;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.epm-link:hover {
+  text-decoration: underline;
+}
