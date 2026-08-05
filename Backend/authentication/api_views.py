@@ -68,11 +68,15 @@ def api_send_otp(request):
     print(f"[OTP] SafeHer OTP Generated for {email}: {otp}")
     print("==========================================")
 
+    if not email_sent:
+        return Response({
+            "error": "Failed to send OTP email. Please verify backend email settings.",
+            "email_error": email_error
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     return Response({
-        "message": "OTP sent to your email." if email_sent else f"OTP generated: {otp}",
-        "otp": otp,
-        "email_sent": email_sent,
-        "email_error": email_error
+        "message": "OTP sent to your email.",
+        "email_sent": True
     }, status=status.HTTP_200_OK)
 
 

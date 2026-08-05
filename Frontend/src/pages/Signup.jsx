@@ -22,14 +22,13 @@ function Signup() {
         setError("");
         setLoading(true);
         try {
-            const res = await api.post("send-otp/", form);
+            await api.post("send-otp/", form);
             navigate("/verify-email", {
                 state: {
                     email: form.email,
                     name: form.name,
                     phone: form.phone,
                     password: form.password,
-                    otp: res.data?.otp
                 }
             });
         } catch (err) {

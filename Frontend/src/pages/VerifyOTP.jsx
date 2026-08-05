@@ -9,7 +9,7 @@ function VerifyOTP() {
     const stateData = location.state || {};
     const email = stateData.email || "";
 
-    const [otp, setOtp] = useState(stateData.otp || "");
+    const [otp, setOtp] = useState("");
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const [loading, setLoading] = useState(false);
@@ -52,52 +52,39 @@ function VerifyOTP() {
 
     return (
         <div className="auth-page">
-        <div className="verify-card">
-            <h1>📧 Verify Your Email</h1>
-            <p>
-                We've sent a 6-digit OTP to<br />
-                <b>{email || "your email"}</b>
-            </p>
-            {stateData.otp && (
-                <div style={{
-                    background: "#eef2ff",
-                    border: "1px solid #c7d2fe",
-                    borderRadius: "12px",
-                    padding: "10px 14px",
-                    fontSize: "13px",
-                    color: "#3730a3",
-                    margin: "15px 0 20px"
-                }}>
-                    ℹ️ <b>Your OTP: {stateData.otp}</b> (Auto-filled below)
+            <div className="verify-card">
+                <h1>📧 Verify Your Email</h1>
+                <p>
+                    We've sent a 6-digit OTP to<br />
+                    <b>{email || "your email"}</b>
+                </p>
+                <form onSubmit={handleSubmit}>
+                    <input
+                        type="text"
+                        name="otp"
+                        maxLength="6"
+                        placeholder="Enter OTP"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value)}
+                        required
+                    />
+                    <button type="submit" disabled={loading}>
+                        {loading ? "Verifying..." : "Verify OTP"}
+                    </button>
+                </form>
+                {error && <p className="error">{error}</p>}
+                {success && <p style={{ color: "#2e7d32", marginTop: "12px", fontSize: "14px" }}>{success}</p>}
+                <div className="resend" style={{ marginTop: "20px" }}>
+                    Didn't receive the OTP?<br />
+                    <button
+                        onClick={handleResend}
+                        disabled={resending}
+                        style={{ background: "none", border: "none", color: "#ff4f81", fontWeight: 600, cursor: "pointer", fontSize: "14px", padding: 0, width: "auto", marginTop: 0 }}
+                    >
+                        {resending ? "Sending..." : "Resend OTP"}
+                    </button>
                 </div>
-            )}
-            <form onSubmit={handleSubmit}>
-                <input
-                    type="text"
-                    name="otp"
-                    maxLength="6"
-                    placeholder="Enter OTP"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    required
-                />
-                <button type="submit" disabled={loading}>
-                    {loading ? "Verifying..." : "Verify OTP"}
-                </button>
-            </form>
-            {error && <p className="error">{error}</p>}
-            {success && <p style={{ color: "#2e7d32", marginTop: "12px", fontSize: "14px" }}>{success}</p>}
-            <div className="resend" style={{ marginTop: "20px" }}>
-                Didn't receive the OTP?<br />
-                <button
-                    onClick={handleResend}
-                    disabled={resending}
-                    style={{ background: "none", border: "none", color: "#ff4f81", fontWeight: 600, cursor: "pointer", fontSize: "14px", padding: 0, width: "auto", marginTop: 0 }}
-                >
-                    {resending ? "Sending..." : "Resend OTP"}
-                </button>
             </div>
-        </div>
         </div>
     );
 }
