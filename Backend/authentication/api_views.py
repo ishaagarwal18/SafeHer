@@ -139,7 +139,14 @@ def api_login(request):
     except UserProfile.DoesNotExist:
         return Response({"error": "Email not found."}, status=status.HTTP_400_BAD_REQUEST)
 
-    if not check_password(password, user.password):
+    # Check password (supports both hashed and legacy/admin plain-text passwords)
+    is_valid_pw = check_password(password, user.password)
+    if not is_valid_pw and user.password == password:
+        user.password = make_password(password)
+        user.save(update_fields=["password"])
+        is_valid_pw = True
+
+    if not is_valid_pw:
         return Response({"error": "Invalid password."}, status=status.HTTP_400_BAD_REQUEST)
 
     request.session["user_id"] = user.id

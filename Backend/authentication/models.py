@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.hashers import make_password
 import random
 
 class UserProfile(models.Model):
@@ -6,6 +7,12 @@ class UserProfile(models.Model):
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=225)
     phone = models.CharField(max_length=10, unique=True)
+
+    def save(self, *args, **kwargs):
+        if self.password and not self.password.startswith("pbkdf2_sha256$") and not self.password.startswith("argon2"):
+            self.password = make_password(self.password)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
     
