@@ -1,0 +1,203 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Emergency Contacts</title>
+<link rel="stylesheet" href="{% static 'css/features.css' %}">
+<style>
+  .alert-error {
+    background: #fff0f0;
+    border: 1px solid #ffb3b3;
+    color: #c0392b;
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    font-size: 14px;
+  }
+  .alert-success {
+    background: #f0fff4;
+    border: 1px solid #9ae6b4;
+    color: #276749;
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    font-size: 14px;
+  }
+  .section-title {
+    font-size: 17px;
+    color: #ff4f81;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .sos-note {
+    background: #fff5f7;
+    border: 1px solid #ffc0cb;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #c0392b;
+    margin-bottom: 16px;
+  }
+  .empty-row td {
+    text-align: center;
+    color: #aaa;
+    font-style: italic;
+    padding: 16px;
+  }
+  .btn-danger {
+    background: linear-gradient(135deg, #ff8585, #ffb3b3);
+  }
+  .btn-small {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1 class="page-title">📞 Emergency Contacts</h1>
+
+  <!-- Add Contact Form -->
+  <div class="card">
+    <p class="section-title">➕ Add New Contact</p>
+
+    {% if error %}
+      <div class="alert-error">⚠️ {{ error }}</div>
+    {% endif %}
+    {% if success %}
+      <div class="alert-success">✅ {{ success }}</div>
+    {% endif %}
+
+    <form method="POST" action="/dashboard/contacts/">
+      {% csrf_token %}
+
+      <input type="text" name="name" placeholder="Contact Name" required>
+
+      <input
+        type="tel"
+        name="phone"
+        placeholder="Phone Number (10 digits)"
+        pattern="[6-9][0-9]{9}"
+        maxlength="10"
+        inputmode="numeric"
+        oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)"
+        title="Must be 10 digits starting with 6, 7, 8, or 9"
+        required>
+
+      <input
+        type="email"
+        name="email"
+        placeholder="Email Address (SOS alerts will be sent here)">
+
+      <input type="text" name="relationship" placeholder="Relationship (e.g. Mom, Friend)" required>
+
+      <button type="submit" class="btn">Add Contact</button>
+    </form>
+  </div>
+
+  <!-- Trusted Contacts -->
+  <div class="card">
+    <p class="section-title">⭐ Trusted Contacts</p>
+    <div class="sos-note">
+      🚨 When you send an SOS alert, an emergency email is automatically sent to all trusted contacts who have an email address listed below.
+    </div>
+
+    <table>
+      <tr>
+        <th>Name</th>
+        <th>Phone</th>
+        <th>Email</th>
+        <th>Relationship</th>
+        <th>SOS Alert</th>
+        <th>Action</th>
+      </tr>
+
+      {% for contact in trusted_contacts %}
+      <tr>
+        <td>{{ contact.contact_name }}</td>
+        <td>{{ contact.phone_number }}</td>
+        <td>{{ contact.email|default:"—" }}</td>
+        <td>{{ contact.relationship }}</td>
+        <td>
+          {% if contact.email %}
+            <span style="color:#276749;font-size:13px;">✅ Email alert</span>
+          {% else %}
+            <span style="color:#aaa;font-size:13px;">❌ No email</span>
+          {% endif %}
+        </td>
+        <td>
+          <form method="POST" action="/dashboard/contacts/remove_trusted/">
+            {% csrf_token %}
+            <input type="hidden" name="contact_id" value="{{ contact.id }}">
+            <button type="submit" class="btn btn-small btn-danger"
+              onclick="return confirm('Remove {{ contact.contact_name }} from trusted contacts?')">
+              Remove
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr class="empty-row">
+        <td colspan="6">No trusted contacts yet. Add contacts below and mark them as trusted.</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <!-- All Other Contacts -->
+  <div class="card">
+    <p class="section-title">📋 All Contacts</p>
+    <table>
+      <tr>
+        <th>Name</th>
+        <th>Phone</th>
+        <th>Email</th>
+        <th>Relationship</th>
+        <th>Actions</th>
+      </tr>
+
+      {% for contact in contacts %}
+      <tr>
+        <td>{{ contact.contact_name }}</td>
+        <td>{{ contact.phone_number }}</td>
+        <td>{{ contact.email|default:"—" }}</td>
+        <td>{{ contact.relationship }}</td>
+        <td style="display:flex;gap:8px;flex-wrap:wrap;">
+          <form method="POST" action="/dashboard/add_trusted_contact/">
+            {% csrf_token %}
+            <input type="hidden" name="contact_id" value="{{ contact.id }}">
+            <button type="submit" class="btn btn-small"
+              onclick="return confirm('Mark {{ contact.contact_name }} as trusted? They will receive SOS alerts.')">
+              ⭐ Mark Trusted
+            </button>
+          </form>
+          <form method="POST" action="/dashboard/contacts/delete/">
+            {% csrf_token %}
+            <input type="hidden" name="contact_id" value="{{ contact.id }}">
+            <button type="submit" class="btn btn-small btn-danger"
+              onclick="return confirm('Delete {{ contact.contact_name }}?')">
+              Delete
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr class="empty-row">
+        <td colspan="5">No contacts added yet.</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+</div>
+
+<div class="nav-links" style="text-align:center;margin:20px 0;">
+  <a href="/dashboard/" class="btn">← Back to Dashboard</a>
+</div>
+
+</body>
+</html>

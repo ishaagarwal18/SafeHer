@@ -1,0 +1,167 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>SOS</title>
+<link rel="stylesheet" href="{% static 'css/features.css' %}">
+<style>
+  #locationStatus {
+    font-size: 13px;
+    margin-bottom: 14px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .status-fetching {
+    background: #fff8e1;
+    color: #b8860b;
+    border: 1px solid #ffe082;
+  }
+  .status-ready {
+    background: #f0fff4;
+    color: #276749;
+    border: 1px solid #9ae6b4;
+  }
+  .status-error {
+    background: #fff0f0;
+    color: #c0392b;
+    border: 1px solid #ffb3b3;
+  }
+  .spinner-sm {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #ffe082;
+    border-top-color: #b8860b;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1 class="page-title">🚨 Emergency SOS</h1>
+
+  <div class="card">
+    <h2>Need Immediate Help?</h2>
+    <p>Press the button below to notify trusted contacts.</p>
+    <br>
+
+    <div id="locationStatus" class="status-fetching">
+      <div class="spinner-sm"></div>
+      <span id="statusText">Fetching your location, please wait...</span>
+    </div>
+
+    <form method="POST" id="sosForm">
+      {% csrf_token %}
+      <input type="hidden" name="latitude" id="latitude">
+      <input type="hidden" name="longitude" id="longitude">
+      <input type="hidden" name="location" id="location">
+
+      <button class="btn" id="sosBtn" disabled>
+        SEND SOS ALERT
+      </button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>SOS History</h2>
+    <table>
+      <tr>
+        <th>Time</th>
+        <th>Status</th>
+        <th>Location</th>
+      </tr>
+      {% for alert in alerts %}
+      <tr>
+        <td>{{ alert.alert_time }}</td>
+        <td>{{ alert.status }}</td>
+        <td>{{ alert.location|default:"Unknown" }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="3" style="text-align:center;color:#aaa;font-style:italic;">No alerts sent yet.</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+</div>
+
+<div class="nav-links">
+  <a href="/dashboard/" class="btn">Back to Dashboard</a>
+</div>
+
+<script>
+  const btn = document.getElementById("sosBtn");
+  const statusBox = document.getElementById("locationStatus");
+  const statusText = document.getElementById("statusText");
+
+  function setReady(lat, lon, address) {
+    document.getElementById("latitude").value = lat;
+    document.getElementById("longitude").value = lon;
+    document.getElementById("location").value = address;
+
+    statusBox.className = "status-ready";
+    statusBox.innerHTML = "✅ Location ready — " + address;
+    btn.disabled = false;
+  }
+
+  function setError(msg) {
+    statusBox.className = "status-error";
+    statusBox.innerHTML = "⚠️ " + msg + " — SOS will be sent without location.";
+    // Still allow sending even without location
+    btn.disabled = false;
+  }
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      function (position) {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+
+        document.getElementById("latitude").value = lat;
+        document.getElementById("longitude").value = lon;
+
+        // Reverse geocode while already enabling the button with coords
+        statusBox.className = "status-ready";
+        statusText && (statusBox.innerHTML = "✅ Location found, resolving address...");
+        btn.disabled = false;
+
+        fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=" + lat + "&lon=" + lon + "&addressdetails=1&zoom=18")
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            var a = data.address || {};
+            var parts = [
+              a.house_number ? (a.house_number + " " + (a.road || "")) : (a.road || a.pedestrian || a.footway || ""),
+              a.neighbourhood || a.suburb || a.quarter || a.residential || "",
+              a.village || a.town || a.city_district || a.county || a.city || "",
+              a.state || "",
+              a.postcode || ""
+            ].map(function(p){ return p.trim(); }).filter(Boolean);
+            var address = parts.join(", ") || data.display_name;
+            setReady(lat, lon, address);
+          })
+          .catch(function () {
+            setReady(lat, lon, lat + ", " + lon);
+          });
+      },
+      function (err) {
+        setError("Could not get location");
+      },
+      { timeout: 10000 }
+    );
+  } else {
+    setError("Geolocation not supported");
+  }
+</script>
+
+</body>
+</html>
