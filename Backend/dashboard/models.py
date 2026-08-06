@@ -3,6 +3,7 @@ from authentication.models import UserProfile
 
 
 class SOSAlert(models.Model):
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, null=True, blank=True, related_name="sos_alerts")
     alert_time = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=50)
     latitude = models.CharField(max_length=50, blank=True, null=True)

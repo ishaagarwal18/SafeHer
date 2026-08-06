@@ -18,13 +18,15 @@ from journey.services import send_safety_check_email, send_trusted_contact_escal
 
 
 def _get_user(request):
-    """Return the logged-in UserProfile from session, or None."""
+    """Return the logged-in UserProfile from session, header, or query params, or None."""
     user_id = request.session.get("user_id")
+    if not user_id:
+        user_id = request.headers.get("X-User-Id") or request.query_params.get("user_id")
     if not user_id:
         return None
     try:
         return UserProfile.objects.get(id=user_id)
-    except UserProfile.DoesNotExist:
+    except (UserProfile.DoesNotExist, ValueError):
         return None
 
 
@@ -32,9 +34,15 @@ def _get_user(request):
 def dashboard_data(request):
     user = _get_user(request)
     if user:
+        journey_count = Journey.objects.filter(user=user).count()
+        contact_count = EmergencyContact.objects.filter(user=user).count()
+        sos_count = SOSSession.objects.filter(user=user).count() + SOSAlert.objects.filter(user=user).count()
         contacts_qs = EmergencyContact.objects.filter(user=user, is_trusted=True)
     else:
-        contacts_qs = EmergencyContact.objects.filter(is_trusted=True)
+        journey_count = 0
+        contact_count = 0
+        sos_count = 0
+        contacts_qs = EmergencyContact.objects.none()
 
     contacts = [
         {
@@ -48,9 +56,9 @@ def dashboard_data(request):
     ]
 
     return Response({
-        "journey_count": Journey.objects.count(),
-        "contact_count": EmergencyContact.objects.filter(user=user).count() if user else EmergencyContact.objects.count(),
-        "sos_count": SOSAlert.objects.count(),
+        "journey_count": journey_count,
+        "contact_count": contact_count,
+        "sos_count": sos_count,
         "contact": contacts,
     })
 
@@ -60,11 +68,11 @@ def dashboard_data(request):
 @api_view(["GET", "POST"])
 def contacts_api(request):
     user = _get_user(request)
-    if not user:
-        user = UserProfile.objects.first()
 
     if request.method == "GET":
-        contacts = EmergencyContact.objects.filter(user=user) if user else EmergencyContact.objects.all()
+        if not user:
+            return Response([])
+        contacts = EmergencyContact.objects.filter(user=user)
         data = [
             {
                 "id": c.id,
@@ -79,6 +87,9 @@ def contacts_api(request):
         return Response(data)
 
     # POST — add a new contact
+    if not user:
+        return Response({"error": "User authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
+
     name = request.data.get("name", "").strip() or request.data.get("contact_name", "").strip()
     phone = request.data.get("phone", "").strip() or request.data.get("phone_number", "").strip()
     email = request.data.get("email", "").strip()
@@ -165,80 +176,7 @@ TRANSPORT_TO_GOOGLE_MODE = {
 
 
 def _journey_user(request):
-    return _get_user(request) or UserProfile.objects.first()
-
-
-def _duration_minutes(duration):
-    try:
-        return max(1, round(int(str(duration).rstrip("s")) / 60))
-    except (TypeError, ValueError):
-        return None
-
-
-def _google_route_estimate(source, destination, transport):
-    """Use Google Routes data so the displayed ETA follows Google Maps traffic data."""
-    api_key = getattr(settings, "GOOGLE_MAPS_API_KEY", "")
-    if not api_key:
-        return {"available": False, "message": "Add GOOGLE_MAPS_API_KEY to enable the live Google Maps ETA."}
-
-    payload = {
-        "origin": {"address": source},
-        "destination": {"address": destination},
-        "travelMode": TRANSPORT_TO_GOOGLE_MODE.get(transport, "DRIVE"),
-        "departureTime": timezone.now().isoformat(),
-    }
-    if payload["travelMode"] == "DRIVE":
-        payload["routingPreference"] = "TRAFFIC_AWARE"
-    route_request = Request(
-        "https://routes.googleapis.com/directions/v2:computeRoutes",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": api_key,
-            "X-Goog-FieldMask": "routes.duration,routes.distanceMeters",
-        },
-        method="POST",
-    )
-    try:
-        with urlopen(route_request, timeout=10) as response:
-            data = json.loads(response.read().decode("utf-8"))
-        route = (data.get("routes") or [None])[0]
-        minutes = _duration_minutes(route.get("duration") if route else None)
-        if not minutes:
-            return {"available": False, "message": "Google Maps did not return a route for these locations."}
-        return {
-            "available": True,
-            "duration_minutes": minutes,
-            "distance_meters": route.get("distanceMeters"),
-            "message": f"Google Maps ETA: about {minutes} min",
-        }
-    except HTTPError as error:
-        return {
-            "available": False,
-            "message": f"Google Maps denied the ETA request (HTTP {error.code}). Check that billing is active and Routes API is enabled for this key.",
-        }
-    except (URLError, TimeoutError):
-        return {"available": False, "message": "SafeHer could not reach Google Maps. Check your internet connection and try again."}
-    except (ValueError, json.JSONDecodeError):
-        return {"available": False, "message": "Google Maps returned an invalid route response. Check the source and destination."}
-
-
-def _serialize_journey(journey):
-    return {
-        "id": journey.id,
-        "source": journey.source,
-        "destination": journey.destination,
-        "transport_mode": journey.transport_mode,
-        "status": journey.status,
-        "start_time": journey.start_time,
-        "completed_at": journey.completed_at,
-        "expected_duration_minutes": journey.expected_duration_minutes,
-        "estimated_arrival_at": journey.estimated_arrival_at,
-        "safety_check_pending": journey.safety_check_pending,
-        "safety_check_count": journey.safety_check_count,
-        "missed_check_count": journey.missed_check_count,
-        "escalated_at": journey.escalated_at,
-    }
+    return _get_user(request)
 
 
 # ── Journey ───────────────────────────────────────────────────────────────────
@@ -247,43 +185,13 @@ def _serialize_journey(journey):
 def journey_api(request):
     user = _journey_user(request)
     if request.method == "GET":
-        if not Journey.objects.exists():
-            now = timezone.now()
-            Journey.objects.create(
-                user=user,
-                source="Downtown Central Bus Stand",
-                destination="Green Park Residential Complex",
-                transport_mode="Bus",
-                status="Completed",
-                expected_duration_minutes=35,
-                start_time=now - timedelta(days=1, hours=2),
-                completed_at=now - timedelta(days=1, hours=1, minutes=25),
-            )
-            Journey.objects.create(
-                user=user,
-                source="Metro Station Gate 2",
-                destination="City Women's Hostel",
-                transport_mode="Walking",
-                status="Completed",
-                expected_duration_minutes=15,
-                start_time=now - timedelta(hours=5),
-                completed_at=now - timedelta(hours=4, minutes=45),
-            )
-            Journey.objects.create(
-                user=user,
-                source="Tech Park Office Tower B",
-                destination="International Airport Terminal 1",
-                transport_mode="Car",
-                status="Active",
-                expected_duration_minutes=45,
-                start_time=now - timedelta(minutes=15),
-            )
-
-        journeys = Journey.objects.filter(user=user).order_by("-start_time") if user else Journey.objects.all().order_by("-start_time")
-        if user and not journeys.exists():
-            journeys = Journey.objects.all().order_by("-start_time")
-
+        if not user:
+            return Response([])
+        journeys = Journey.objects.filter(user=user).order_by("-start_time")
         return Response([_serialize_journey(journey) for journey in journeys])
+
+    if not user:
+        return Response({"error": "User authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
 
     source = request.data.get("source", "").strip()
     destination = request.data.get("destination", "").strip()
@@ -470,8 +378,11 @@ def journey_check_in_api(request, journey_id):
 
 @api_view(["GET", "POST"])
 def sos_api(request):
+    user = _get_user(request)
     if request.method == "GET":
-        alerts = SOSAlert.objects.all().order_by("-alert_time")
+        if not user:
+            return Response([])
+        alerts = SOSAlert.objects.filter(user=user).order_by("-alert_time")
         data = [
             {
                 "id": a.id,
@@ -490,21 +401,15 @@ def sos_api(request):
     longitude = request.data.get("longitude", "")
 
     alert = SOSAlert.objects.create(
+        user=user,
         status="Sent",
         location=location,
         latitude=latitude,
         longitude=longitude,
     )
 
-    user = _get_user(request)
-    if not user:
-        user = UserProfile.objects.first()
-
     user_name = user.name if user else ""
-    if user:
-        trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True)
-    else:
-        trusted_contacts = EmergencyContact.objects.filter(is_trusted=True)
+    trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True) if user else EmergencyContact.objects.none()
 
     _send_sos_sms(location, trusted_contacts, user_name, latitude, longitude)
 
@@ -530,8 +435,11 @@ api_sos = sos_api
 
 @api_view(["GET", "POST"])
 def report_api(request):
+    user = _get_user(request)
     if request.method == "GET":
-        reports = UnsafeReport.objects.all().order_by("-id")
+        if not user:
+            return Response([])
+        reports = UnsafeReport.objects.filter(user=user).order_by("-id")
         data = [
             {
                 "id": r.id,
@@ -552,6 +460,7 @@ def report_api(request):
         return Response({"error": "Location and description are required."}, status=status.HTTP_400_BAD_REQUEST)
 
     report = UnsafeReport.objects.create(
+        user=user,
         area_name=location.strip(),
         issue_type=issue_type.strip(),
         description=description,
@@ -593,12 +502,9 @@ def sos_start_api(request):
     """POST /api/sos/start/ — Starts a new SOS emergency session."""
     user = _get_user(request)
     if not user:
-        user = UserProfile.objects.first()
+        return Response({"error": "User authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
 
-    # Prevent duplicate active sessions
-    active_session = SOSSession.objects.filter(status="Active")
-    if user:
-        active_session = active_session.filter(user=user)
+    active_session = SOSSession.objects.filter(user=user, status="Active")
 
     active_obj = active_session.first()
     if active_obj:
@@ -636,11 +542,11 @@ def sos_start_api(request):
         )
 
     # Sync with legacy SOSAlert model for dashboard metrics
-    SOSAlert.objects.create(status="Sent", location=location, latitude=lat, longitude=lon)
+    SOSAlert.objects.create(user=user, status="Sent", location=location, latitude=lat, longitude=lon)
 
     # Notify trusted contacts via SMS
-    user_name = user.name if user else ""
-    trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True) if user else EmergencyContact.objects.filter(is_trusted=True)
+    user_name = user.name
+    trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True)
     _send_sos_sms(location, trusted_contacts, user_name, lat, lon)
 
     serializer = SOSSessionSerializer(session, context={"request": request})
@@ -692,17 +598,18 @@ def sos_end_api(request):
     """POST /api/sos/end/ — Ends active SOS session ("I'm Safe")."""
     from .views import _send_safe_email
 
+    user = _get_user(request)
     session_id = request.data.get("session_id")
     if not session_id:
-        # Fallback to latest active session for user
-        user = _get_user(request)
-        active_qs = SOSSession.objects.filter(status="Active")
-        if user:
-            active_qs = active_qs.filter(user=user)
+        if not user:
+            return Response({"error": "No active SOS session found."}, status=status.HTTP_404_NOT_FOUND)
+        active_qs = SOSSession.objects.filter(user=user, status="Active")
         session = active_qs.first()
     else:
         try:
             session = SOSSession.objects.get(id=session_id)
+            if user and session.user and session.user != user:
+                return Response({"error": "Unauthorized session access."}, status=status.HTTP_403_FORBIDDEN)
         except SOSSession.DoesNotExist:
             session = None
 
@@ -718,12 +625,9 @@ def sos_end_api(request):
     session.save()
 
     # Send "I'm Safe" email to all trusted contacts
-    user = _get_user(request) or session.user or UserProfile.objects.first()
+    user = user or session.user
     user_name = user.name if user else ""
-    if user:
-        trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True)
-    else:
-        trusted_contacts = EmergencyContact.objects.filter(is_trusted=True)
+    trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True) if user else EmergencyContact.objects.none()
 
     mins = session.duration_seconds // 60
     secs = session.duration_seconds % 60
@@ -751,9 +655,15 @@ def sos_end_api(request):
 def sos_history_api(request):
     """GET /api/sos/history/ — Lists past SOS sessions with search, date filters, and pagination."""
     user = _get_user(request)
-    queryset = SOSSession.objects.all()
-    if user:
-        queryset = queryset.filter(user=user)
+    if not user:
+        return Response({
+            "total": 0,
+            "page": 1,
+            "page_size": 10,
+            "total_pages": 0,
+            "results": [],
+        })
+    queryset = SOSSession.objects.filter(user=user)
 
     # Search filter
     q = request.query_params.get("q", "").strip()

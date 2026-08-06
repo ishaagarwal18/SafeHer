@@ -7,14 +7,14 @@ from reports.models import UnsafeReport
 
 
 def _get_current_user(request):
-    """Get logged-in user from session, fallback to first user for dev."""
+    """Get logged-in user from session."""
     user_id = request.session.get("user_id")
     if user_id:
         try:
             return UserProfile.objects.get(id=user_id)
         except UserProfile.DoesNotExist:
             pass
-    return UserProfile.objects.first()
+    return None
 
 
 def _relationship_message(relationship):
@@ -369,7 +369,7 @@ def dashboard_page(request):
 
     journey_count = Journey.objects.filter(user=user).count()
     contact_count = EmergencyContact.objects.filter(user=user).count()
-    sos_count = SOSAlert.objects.count()
+    sos_count = SOSAlert.objects.filter(user=user).count()
     trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True)
     return render(request, "dashboard.html", {
         "journey_count": journey_count,
@@ -390,6 +390,7 @@ def sos_page(request):
         latitude = request.POST.get("latitude", "")
         longitude = request.POST.get("longitude", "")
         SOSAlert.objects.create(
+            user=user,
             status="Sent",
             location=location,
             latitude=latitude,
@@ -398,7 +399,7 @@ def sos_page(request):
         trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True)
         _send_sos_sms(location, trusted_contacts, user.name, latitude, longitude)
 
-    alerts = SOSAlert.objects.all().order_by("-id")
+    alerts = SOSAlert.objects.filter(user=user).order_by("-id")
     return render(request, "sos.html", {"alerts": alerts, "user": user})
 
 
@@ -469,13 +470,14 @@ def journey_page(request):
 
         if not unsafe_warning:
             Journey.objects.create(
+                user=user,
                 source=source,
                 destination=destination,
                 transport_mode=transport,
             )
             return redirect("/dashboard/journey/")
 
-    journeys = Journey.objects.all().order_by("-start_time")
+    journeys = Journey.objects.filter(user=user).order_by("-start_time")
     return render(request, "start_journey.html", {
         "journeys": journeys,
         "unsafe_warning": unsafe_warning,
@@ -496,11 +498,12 @@ def reports_page(request):
 
     if request.method == "POST":
         UnsafeReport.objects.create(
+            user=user,
             area_name=request.POST.get("area", ""),
             issue_type=request.POST.get("issue", ""),
             description=request.POST.get("description", ""),
         )
-    reports = UnsafeReport.objects.all().order_by("-id")
+    reports = UnsafeReport.objects.filter(user=user).order_by("-id")
     return render(request, 'report.html', {"reports": reports, "user": user})
 
 
