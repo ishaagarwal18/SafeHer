@@ -39,27 +39,7 @@ function Login() {
     <div className="auth-page">
       <div className="auth-card">
         <h1>Welcome Back</h1>
-
-        {/* Show banner when user tried to access a protected page */}
-        {loginRequired && (
-          <div style={{
-            background: "#fff0f5",
-            border: "1.5px solid #ff4f81",
-            color: "#c0164f",
-            padding: "13px 16px",
-            borderRadius: "14px",
-            marginBottom: "18px",
-            textAlign: "center",
-            fontWeight: 700,
-            fontSize: "14px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-          }}>
-            🔒 Login required — please sign in to access this page
-          </div>
-        )}
+        <p className="subtitle pink-subtitle">🔐 Please log in to continue</p>
 
         <form onSubmit={handleSubmit}>
           <div className="input-group">

@@ -59,15 +59,17 @@ function VerifyOTP() {
                     <b>{email || "your email"}</b>
                 </p>
                 <form onSubmit={handleSubmit}>
-                    <input
-                        type="text"
-                        name="otp"
-                        maxLength="6"
-                        placeholder="Enter OTP"
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value)}
-                        required
-                    />
+                    <div className="input-group">
+                        <input
+                            type="text"
+                            name="otp"
+                            maxLength="6"
+                            placeholder="Enter OTP"
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                            required
+                        />
+                    </div>
                     <button type="submit" disabled={loading}>
                         {loading ? "Verifying..." : "Verify OTP"}
                     </button>
