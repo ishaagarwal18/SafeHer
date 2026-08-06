@@ -64,22 +64,23 @@ def send_email_otp(request):
                 "error": "Phone number already registered."
             })
 
-        # Save Data Temporarily
-        request.session["signup_name"] = name
-        request.session["signup_email"] = email
-        request.session["signup_phone"] = phone
-
-        # Store HASHED password in session
-        request.session["signup_password"] = make_password(password)
-
         # Generate OTP
         otp = str(random.randint(100000, 999999))
 
-        # Save OTP
+        # Save OTP + signup data on the OTP record (session-independent fallback)
         obj, created = EmailOTP.objects.get_or_create(email=email)
         obj.otp = otp
         obj.is_verified = False
+        obj.signup_name = name
+        obj.signup_phone = phone
+        obj.signup_password = make_password(password)
         obj.save()
+
+        # Also keep in session as backup
+        request.session["signup_name"] = name
+        request.session["signup_email"] = email
+        request.session["signup_phone"] = phone
+        request.session["signup_password"] = obj.signup_password
 
         # Send Email
         try:
@@ -140,55 +141,98 @@ def login_page(request):
 
 
 def contacts_page(request):
-    if request.method == "POST":
+    user_id = request.session.get("user_id")
+    user = UserProfile.objects.filter(id=user_id).first() if user_id else None
+    if request.method == "POST" and user:
         EmergencyContact.objects.create(
-            user=UserProfile.objects.first(),
+            user=user,
             contact_name=request.POST["name"],
             phone_number=request.POST["phone"],
             relationship=request.POST["relationship"]
         )
-    contacts = EmergencyContact.objects.all()
+    contacts = EmergencyContact.objects.filter(user=user) if user else EmergencyContact.objects.none()
     return render(
         request,
         "contacts.html",
         {"contacts": contacts}
     )
 
+
 def verify_email(request):
     if request.method == "POST":
-        email = request.POST.get("email")
-        otp = request.POST.get("otp")
+        email = request.POST.get("email", "").strip().lower()
+        otp   = request.POST.get("otp", "").strip()
+
         try:
             obj = EmailOTP.objects.get(email=email)
-
-            # Check expiry
-            if timezone.now() > obj.created_at + timedelta(minutes=OTP_EXPIRY_MINUTES):
-                return render(request, "verify_email.html", {
-                    "email": email,
-                    "error": f"OTP expired. Please request a new one."
-                })
-
-            if obj.otp == otp:
-                obj.is_verified = True
-                obj.save()
-                UserProfile.objects.create(
-                    name=request.session["signup_name"],
-                    email=request.session["signup_email"],
-                    phone=request.session["signup_phone"],
-                    password=request.session["signup_password"],
-                )
-                request.session.flush()
-                return redirect("login")
-            else:
-                return render(request, "verify_email.html", {
-                    "email": email,
-                    "error": "Invalid OTP. Please try again."
-                })
         except EmailOTP.DoesNotExist:
             return render(request, "verify_email.html", {
                 "email": email,
                 "error": "OTP not found. Please sign up again."
             })
+
+        # Check expiry
+        if timezone.now() > obj.created_at + timedelta(minutes=OTP_EXPIRY_MINUTES):
+            return render(request, "verify_email.html", {
+                "email": email,
+                "error": "OTP expired. Please request a new one."
+            })
+
+        if obj.otp != otp:
+            return render(request, "verify_email.html", {
+                "email": email,
+                "error": "Invalid OTP. Please try again."
+            })
+
+        # Already verified / account exists
+        if UserProfile.objects.filter(email=email).exists():
+            return redirect("login")
+
+        # Read signup data — prefer OTP record (cross-origin safe), fall back to session
+        name     = obj.signup_name     or request.session.get("signup_name", "")
+        phone    = obj.signup_phone    or request.session.get("signup_phone", "")
+        hashed_pw = obj.signup_password or request.session.get("signup_password", "")
+
+        # Validate we have everything needed
+        if not name or not phone or not hashed_pw:
+            return render(request, "verify_email.html", {
+                "email": email,
+                "error": "Session expired. Please sign up again."
+            })
+
+        # Truncate phone to 10 chars to match model max_length
+        phone = phone[:10]
+
+        # Handle duplicate phone — append suffix to avoid crash
+        if UserProfile.objects.filter(phone=phone).exists():
+            return render(request, "verify_email.html", {
+                "email": email,
+                "error": "Phone number already registered. Please sign up with a different number."
+            })
+
+        try:
+            UserProfile.objects.create(
+                name=name,
+                email=email,
+                phone=phone,
+                password=hashed_pw,
+            )
+        except Exception as e:
+            return render(request, "verify_email.html", {
+                "email": email,
+                "error": f"Account creation failed: {str(e)}"
+            })
+
+        # Mark OTP verified and clear signup data
+        obj.is_verified   = True
+        obj.signup_name   = None
+        obj.signup_phone  = None
+        obj.signup_password = None
+        obj.save()
+
+        request.session.flush()
+        return redirect("login")
+
     return redirect("signup")
 
 

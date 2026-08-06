@@ -157,12 +157,9 @@ function SOS() {
   }, [activeSession]);
 
   const handleSOSClick = () => {
-    if (activeSession) {
-      showToast("An SOS emergency session is already active!", "warning");
-      return;
-    }
     setShowCountdown(true);
   };
+
 
   const cancelCountdown = () => {
     setShowCountdown(false);
@@ -240,7 +237,7 @@ function SOS() {
         await dashboardApi.post("api/sos/upload-photo/", formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
-        showToast("📷 Photo uploaded successfully!", "success");
+        showToast("📷 Photo captured & sent to trusted contacts immediately!", "success");
       } catch (_) {
         showToast("Failed to upload photo.", "error");
       } finally {
@@ -249,11 +246,48 @@ function SOS() {
     }, "image/jpeg");
   };
 
+  const getSupportedAudioMime = () => {
+    const candidates = [
+      { mime: "audio/mp4", ext: "mp4" },
+      { mime: "audio/aac", ext: "aac" },
+      { mime: "audio/webm;codecs=opus", ext: "webm" },
+      { mime: "audio/webm", ext: "webm" },
+      { mime: "audio/ogg;codecs=opus", ext: "ogg" },
+    ];
+    for (const c of candidates) {
+      if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(c.mime)) {
+        return c;
+      }
+    }
+    return { mime: "audio/webm", ext: "webm" };
+  };
+
+  const getSupportedVideoMime = () => {
+    const candidates = [
+      { mime: "video/mp4", ext: "mp4" },
+      { mime: "video/webm;codecs=h264,opus", ext: "mp4" },
+      { mime: "video/webm;codecs=vp8,opus", ext: "webm" },
+      { mime: "video/webm", ext: "webm" },
+    ];
+    for (const c of candidates) {
+      if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(c.mime)) {
+        return c;
+      }
+    }
+    return { mime: "video/webm", ext: "webm" };
+  };
+
   const startAudioRecording = async () => {
     if (!activeSession) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioRecorderRef.current = new MediaRecorder(stream);
+      const audioTypeInfo = getSupportedAudioMime();
+      const recorderOptions = {
+        mimeType: audioTypeInfo.mime,
+        audioBitsPerSecond: 32000, // 32 kbps voice compression for small file size and high clarity
+      };
+
+      audioRecorderRef.current = new MediaRecorder(stream, recorderOptions);
       audioChunksRef.current = [];
 
       audioRecorderRef.current.ondataavailable = (e) => {
@@ -261,8 +295,8 @@ function SOS() {
       };
 
       audioRecorderRef.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        const file = new File([audioBlob], `sos_audio_${Date.now()}.webm`, { type: "audio/webm" });
+        const audioBlob = new Blob(audioChunksRef.current, { type: audioTypeInfo.mime });
+        const file = new File([audioBlob], `sos_audio_${Date.now()}.${audioTypeInfo.ext}`, { type: audioTypeInfo.mime });
 
         setAudioUploading(true);
         const formData = new FormData();
@@ -274,7 +308,7 @@ function SOS() {
           await dashboardApi.post("api/sos/upload-audio/", formData, {
             headers: { "Content-Type": "multipart/form-data" },
           });
-          showToast("🎙️ Audio recording uploaded!", "success");
+          showToast("🎙️ Compressed audio recording sent to trusted contacts!", "success");
         } catch (_) {
           showToast("Failed to upload audio.", "error");
         } finally {
@@ -282,7 +316,7 @@ function SOS() {
         }
       };
 
-      audioRecorderRef.current.start();
+      audioRecorderRef.current.start(500);
       setAudioRecording(true);
       setAudioDuration(0);
 
@@ -306,9 +340,20 @@ function SOS() {
   const startVideoRecording = async () => {
     if (!activeSession) return;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640, max: 854 }, height: { ideal: 480, max: 480 }, frameRate: { ideal: 15, max: 20 } },
+        audio: true,
+      });
       if (videoRef.current) videoRef.current.srcObject = stream;
-      videoRecorderRef.current = new MediaRecorder(stream);
+
+      const videoTypeInfo = getSupportedVideoMime();
+      const recorderOptions = {
+        mimeType: videoTypeInfo.mime,
+        videoBitsPerSecond: 350000, // 350 kbps video compression for small file size and high mobile/email compatibility
+        audioBitsPerSecond: 32000,
+      };
+
+      videoRecorderRef.current = new MediaRecorder(stream, recorderOptions);
       videoChunksRef.current = [];
 
       videoRecorderRef.current.ondataavailable = (e) => {
@@ -316,8 +361,8 @@ function SOS() {
       };
 
       videoRecorderRef.current.onstop = async () => {
-        const videoBlob = new Blob(videoChunksRef.current, { type: "video/webm" });
-        const file = new File([videoBlob], `sos_video_${Date.now()}.webm`, { type: "video/webm" });
+        const videoBlob = new Blob(videoChunksRef.current, { type: videoTypeInfo.mime });
+        const file = new File([videoBlob], `sos_video_${Date.now()}.${videoTypeInfo.ext}`, { type: videoTypeInfo.mime });
 
         setVideoUploading(true);
         const formData = new FormData();
@@ -329,7 +374,7 @@ function SOS() {
           await dashboardApi.post("api/sos/upload-video/", formData, {
             headers: { "Content-Type": "multipart/form-data" },
           });
-          showToast("📹 Video recording uploaded!", "success");
+          showToast("📹 Compressed video recording sent to trusted contacts!", "success");
         } catch (_) {
           showToast("Failed to upload video.", "error");
         } finally {
@@ -337,7 +382,7 @@ function SOS() {
         }
       };
 
-      videoRecorderRef.current.start();
+      videoRecorderRef.current.start(500);
       setVideoRecording(true);
       setVideoDuration(0);
 
@@ -357,6 +402,7 @@ function SOS() {
       if (videoTimerRef.current) clearInterval(videoTimerRef.current);
     }
   };
+
 
   const formatTimer = (totalSecs) => {
     const hrs = Math.floor(totalSecs / 3600);
@@ -433,10 +479,15 @@ function SOS() {
               <div style={{ background: "white", padding: "14px 18px", borderRadius: "14px", margin: "10px 0" }}>
                 <strong>📍 Last Saved Address:</strong> {locationName}
               </div>
-              <button type="button" className="btn-im-safe" onClick={handleImSafe} disabled={loading}>
-                <span>🛡️</span>
-                <span>{loading ? "SAVING..." : "I'M SAFE NOW (End Emergency)"}</span>
-              </button>
+              <div style={{ display: "flex", gap: "12px", marginTop: "14px", flexWrap: "wrap" }}>
+                <button type="button" className="banner-action-btn" onClick={triggerSOS} disabled={loading} style={{ background: "#e53935", color: "white", flex: 1, justifyContent: "center" }}>
+                  <span>🚨 Send Urgent SOS Email Alert</span>
+                </button>
+                <button type="button" className="btn-im-safe" onClick={handleImSafe} disabled={loading} style={{ flex: 1 }}>
+                  <span>🛡️</span>
+                  <span>{loading ? "SAVING..." : "I'M SAFE NOW (End Emergency)"}</span>
+                </button>
+              </div>
             </div>
           )}
 

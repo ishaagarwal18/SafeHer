@@ -9,6 +9,7 @@ import "../styles/dashboard.css";
 
 function Dashboard() {
   const { user } = useAuth();
+  const [isFirstVisit, setIsFirstVisit] = useState(false);
 
   const [data, setData] = useState({
     journey_count: 0,
@@ -18,6 +19,17 @@ function Dashboard() {
   });
 
   useEffect(() => {
+    if (user?.id) {
+      const storageKey = `safeher_visited_${user.id}`;
+      const hasVisited = localStorage.getItem(storageKey);
+      if (!hasVisited) {
+        setIsFirstVisit(true);
+        localStorage.setItem(storageKey, "true");
+      }
+    }
+  }, [user]);
+
+  useEffect(() => {
     dashboardApi
       .get("dashboard-data/")
       .then((res) => setData(res.data))
@@ -25,6 +37,7 @@ function Dashboard() {
   }, []);
 
   const userName = user?.name ? user.name.split(" ")[0] : "User";
+  const greetingText = isFirstVisit ? `Welcome, ${userName} 💖` : `Welcome back, ${userName} 💖`;
 
   return (
     <DashboardLayout>
@@ -36,7 +49,7 @@ function Dashboard() {
             </span>
             <div>
               <p className="eyebrow">SAFEHER SAFETY HUB</p>
-              <h1>Welcome back, {userName} 💖</h1>
+              <h1>{greetingText}</h1>
               <p>Your personal safety console. Stay protected and connected wherever you go.</p>
             </div>
           </header>

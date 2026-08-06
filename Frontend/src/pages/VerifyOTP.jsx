@@ -86,7 +86,7 @@ function VerifyOTP() {
                 lineHeight: "1.7"
             }}>
                 📧 Email: <b>{maskEmail(email)}</b><br />
-                {phone && <>📱 Phone: <b>{maskPhone(phone)}</b></>}
+                {phone && <>📱 Phone: <b>{maskPhone(phone)}</b><br /></>}
             </div>
 
             <form onSubmit={handleSubmit}>
@@ -97,7 +97,9 @@ function VerifyOTP() {
                     placeholder="Enter 6-digit OTP"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                    autoComplete="one-time-code"
+                    autoComplete="off"
+                    autoCapitalize="off"
+                    autoCorrect="off"
                     required
                 />
                 <button type="submit" disabled={loading}>

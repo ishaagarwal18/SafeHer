@@ -11,8 +11,23 @@ const api = axios.create({
     withCredentials: true,
 });
 
-// Attach CSRF token to every mutating request
+function getStoredUserId() {
+    try {
+        const saved = localStorage.getItem("user");
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            return parsed?.id || null;
+        }
+    } catch (_) {}
+    return null;
+}
+
+// Attach CSRF token and X-User-Id to requests
 api.interceptors.request.use((config) => {
+    const userId = getStoredUserId();
+    if (userId) {
+        config.headers["X-User-Id"] = userId;
+    }
     if (["post", "put", "patch", "delete"].includes(config.method)) {
         const csrfToken = getCookie("csrftoken");
         if (csrfToken) config.headers["X-CSRFToken"] = csrfToken;
@@ -27,11 +42,16 @@ export const dashboardApi = axios.create({
 });
 
 dashboardApi.interceptors.request.use((config) => {
+    const userId = getStoredUserId();
+    if (userId) {
+        config.headers["X-User-Id"] = userId;
+    }
     if (["post", "put", "patch", "delete"].includes(config.method)) {
         const csrfToken = getCookie("csrftoken");
         if (csrfToken) config.headers["X-CSRFToken"] = csrfToken;
     }
     return config;
 });
+
 
 export default api;

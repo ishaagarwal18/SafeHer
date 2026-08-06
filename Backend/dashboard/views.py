@@ -7,14 +7,16 @@ from reports.models import UnsafeReport
 
 
 def _get_current_user(request):
-    """Get logged-in user from session, fallback to first user for dev."""
+    """Get logged-in user from session or None."""
     user_id = request.session.get("user_id")
     if user_id:
         try:
             return UserProfile.objects.get(id=user_id)
         except UserProfile.DoesNotExist:
             pass
-    return UserProfile.objects.first()
+    return None
+
+
 
 
 def _relationship_message(relationship):
@@ -111,36 +113,27 @@ def _send_twilio_sms(trusted_contacts, user_name="", location="", latitude="", l
             print(f"Unexpected SMS error for {contact.contact_name}: {e}")
 
 
-def _get_trusted_contacts(user=None):
-    """Retrieve trusted contacts for user, with fallbacks so emergency emails are never lost."""
-    if user:
-        contacts = EmergencyContact.objects.filter(user=user, is_trusted=True)
-        if not contacts.exists():
-            contacts = EmergencyContact.objects.filter(user=user)
-        if not contacts.exists():
-            contacts = EmergencyContact.objects.filter(is_trusted=True)
-        if not contacts.exists():
-            contacts = EmergencyContact.objects.all()
-    else:
-        contacts = EmergencyContact.objects.filter(is_trusted=True)
-        if not contacts.exists():
-            contacts = EmergencyContact.objects.all()
-    return contacts
-
-
 def _send_sos_sms(location, trusted_contacts, user_name="", latitude="", longitude=""):
     """Send SOS alert HTML email to all trusted contacts that have an email address."""
     from django.core.mail import EmailMultiAlternatives
 
     maps_link = ""
+    static_map_img = ""
     if latitude and longitude:
-        maps_link = f"https://www.google.com/maps?q={latitude},{longitude}"
+        try:
+            lat_f = float(latitude)
+            lon_f = float(longitude)
+            maps_link = f"https://www.google.com/maps?q={lat_f},{lon_f}"
+            static_map_img = (
+                f"https://static-maps.yandex.ru/1.x/?lang=en_US&ll={lon_f},{lat_f}&z=16&l=map&size=600,280&pt={lon_f},{lat_f},pm2rdl"
+            )
+        except (ValueError, TypeError):
+            maps_link = ""
+            static_map_img = ""
 
-    from_email = settings.EMAIL_HOST_USER if (settings.EMAIL_HOST_USER and "your-email" not in settings.EMAIL_HOST_USER) else "noreply@safeher.com"
 
     for contact in trusted_contacts:
-        email_addr = (contact.email or "").strip()
-        if not email_addr:
+        if not contact.email:
             print(f"No email for trusted contact {contact.contact_name} ({contact.phone_number}) — skipped")
             continue
 
@@ -169,6 +162,12 @@ def _send_sos_sms(location, trusted_contacts, user_name="", latitude="", longitu
                         border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;">
                 🗺 View Live Location on Google Maps
               </a>
+            </div>
+            <div style="margin:16px 0;border-radius:12px;overflow:hidden;border:2px solid #e53935;">
+              <img src="https://static-maps.yandex.ru/1.x/?lang=en_US&ll={longitude},{latitude}&z=16&l=map&size=600,280&pt={longitude},{latitude},pm2rdl"
+                   alt="Location Map"
+                   style="width:100%;display:block;"
+                   onerror="this.style.display='none'">
             </div>
             """
 
@@ -200,17 +199,21 @@ def _send_sos_sms(location, trusted_contacts, user_name="", latitude="", longitu
         """
 
         try:
+            sender_email = f"SafeHer Emergency Console <{settings.EMAIL_HOST_USER}>"
             msg = EmailMultiAlternatives(
                 subject=subject,
                 body=plain_text,
-                from_email=from_email,
-                to=[email_addr],
+                from_email=sender_email,
+                to=[contact.email],
+                headers={"X-Priority": "1", "Priority": "urgent", "Importance": "High"},
             )
             msg.attach_alternative(html_content, "text/html")
             msg.send(fail_silently=False)
-            print(f"[SOS EMAIL SENT] to {contact.contact_name} <{email_addr}>")
+            print(f"SOS email sent successfully to {contact.contact_name} <{contact.email}>")
         except Exception as e:
-            print(f"[SOS EMAIL ERROR] for {contact.contact_name} <{email_addr}>: {e}")
+            print(f"SOS email error for {contact.contact_name}: {e}")
+
+
 
     # Also send SMS to ALL trusted contacts (including those without email)
     _send_twilio_sms(trusted_contacts, user_name, location, latitude, longitude)
@@ -220,11 +223,8 @@ def _send_safe_email(trusted_contacts, user_name="", duration_str="", location="
     """Send an HTML email notification to trusted contacts when the user marks themselves as safe."""
     from django.core.mail import EmailMultiAlternatives
 
-    from_email = settings.EMAIL_HOST_USER if (settings.EMAIL_HOST_USER and "your-email" not in settings.EMAIL_HOST_USER) else "noreply@safeher.com"
-
     for contact in trusted_contacts:
-        email_addr = (contact.email or "").strip()
-        if not email_addr:
+        if not contact.email:
             print(f"No email for trusted contact {contact.contact_name} — skipped safe notification")
             continue
 
@@ -270,17 +270,21 @@ def _send_safe_email(trusted_contacts, user_name="", duration_str="", location="
         """
 
         try:
+            sender_email = f"SafeHer Emergency Console <{settings.EMAIL_HOST_USER}>"
             msg = EmailMultiAlternatives(
                 subject=subject,
                 body=plain_text,
-                from_email=from_email,
-                to=[email_addr],
+                from_email=sender_email,
+                to=[contact.email],
+                headers={"X-Priority": "1", "Priority": "urgent", "Importance": "High"},
             )
             msg.attach_alternative(html_content, "text/html")
             msg.send(fail_silently=False)
-            print(f"[SAFE EMAIL SENT] to {contact.contact_name} <{email_addr}>")
+            print(f"Safe confirmation email sent successfully to {contact.contact_name} <{contact.email}>")
         except Exception as e:
-            print(f"[SAFE EMAIL ERROR] for {contact.contact_name}: {e}")
+            print(f"Safe email error for {contact.contact_name}: {e}")
+
+
 
     # Also send "safe" SMS to all trusted contacts
     _send_safe_sms(trusted_contacts, user_name, location)
@@ -395,17 +399,15 @@ def sos_page(request):
         latitude = request.POST.get("latitude", "")
         longitude = request.POST.get("longitude", "")
         SOSAlert.objects.create(
-            user=user,
             status="Sent",
             location=location,
             latitude=latitude,
             longitude=longitude,
         )
-        trusted_contacts = _get_trusted_contacts(user)
-        user_name = user.name if user else ""
-        _send_sos_sms(location, trusted_contacts, user_name, latitude, longitude)
+        trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True)
+        _send_sos_sms(location, trusted_contacts, user.name, latitude, longitude)
 
-    alerts = SOSAlert.objects.filter(user=user).order_by("-id")
+    alerts = SOSAlert.objects.all().order_by("-id")
     return render(request, "sos.html", {"alerts": alerts, "user": user})
 
 
@@ -476,14 +478,13 @@ def journey_page(request):
 
         if not unsafe_warning:
             Journey.objects.create(
-                user=user,
                 source=source,
                 destination=destination,
                 transport_mode=transport,
             )
             return redirect("/dashboard/journey/")
 
-    journeys = Journey.objects.filter(user=user).order_by("-start_time")
+    journeys = Journey.objects.all().order_by("-start_time")
     return render(request, "start_journey.html", {
         "journeys": journeys,
         "unsafe_warning": unsafe_warning,
@@ -504,12 +505,11 @@ def reports_page(request):
 
     if request.method == "POST":
         UnsafeReport.objects.create(
-            user=user,
             area_name=request.POST.get("area", ""),
             issue_type=request.POST.get("issue", ""),
             description=request.POST.get("description", ""),
         )
-    reports = UnsafeReport.objects.filter(user=user).order_by("-id")
+    reports = UnsafeReport.objects.all().order_by("-id")
     return render(request, 'report.html', {"reports": reports, "user": user})
 
 

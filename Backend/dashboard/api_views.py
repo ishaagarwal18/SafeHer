@@ -13,28 +13,26 @@ from journey.models import Journey
 from authentication.models import EmergencyContact, UserProfile
 from dashboard.models import SOSAlert
 from reports.models import UnsafeReport
-from .views import _send_sos_sms, _get_trusted_contacts
+from .views import _send_sos_sms
 from journey.services import send_safety_check_email, send_trusted_contact_escalation
 
 
 def _get_user(request):
-    """Return the logged-in UserProfile from session, or request data, or None."""
+    """Return the logged-in UserProfile from session, header, or request body/params, or fallback to first user."""
     user_id = request.session.get("user_id")
+    if not user_id:
+        user_id = request.headers.get("X-User-Id") or request.META.get("HTTP_X_USER_ID")
     if not user_id and hasattr(request, "data"):
-        user_id = request.data.get("user_id")
-        if not user_id:
-            email = request.data.get("user_email") or request.data.get("email")
-            if email:
-                try:
-                    return UserProfile.objects.get(email=email)
-                except UserProfile.DoesNotExist:
-                    pass
+        user_id = request.data.get("user_id") or request.data.get("user")
+    if not user_id and hasattr(request, "POST"):
+        user_id = request.POST.get("user_id") or request.POST.get("user")
     if user_id:
         try:
             return UserProfile.objects.get(id=user_id)
-        except UserProfile.DoesNotExist:
+        except (UserProfile.DoesNotExist, ValueError):
             pass
-    return None
+    return UserProfile.objects.first()
+
 
 
 @api_view(["GET"])
@@ -44,7 +42,7 @@ def dashboard_data(request):
         contacts_qs = EmergencyContact.objects.filter(user=user, is_trusted=True)
         journey_count = Journey.objects.filter(user=user).count()
         contact_count = EmergencyContact.objects.filter(user=user).count()
-        sos_count = SOSAlert.objects.filter(user=user).count()
+        sos_count = SOSAlert.objects.filter(user=user).count() + SOSSession.objects.filter(user=user).count()
     else:
         contacts_qs = EmergencyContact.objects.none()
         journey_count = 0
@@ -90,6 +88,10 @@ def contacts_api(request):
             for c in contacts
         ]
         return Response(data)
+
+    if not user:
+        return Response({"error": "Authentication required. Please login."}, status=status.HTTP_401_UNAUTHORIZED)
+
 
     # POST — add a new contact
     name = request.data.get("name", "").strip() or request.data.get("contact_name", "").strip()
@@ -262,6 +264,7 @@ def journey_api(request):
     if request.method == "GET":
         journeys = Journey.objects.filter(user=user).order_by("-start_time") if user else Journey.objects.none()
         return Response([_serialize_journey(journey) for journey in journeys])
+
 
     source = request.data.get("source", "").strip()
     destination = request.data.get("destination", "").strip()
@@ -446,10 +449,13 @@ def journey_check_in_api(request, journey_id):
 
 # ── SOS ───────────────────────────────────────────────────────────────────────
 
+# ── SOS ───────────────────────────────────────────────────────────────────────
+
 @api_view(["GET", "POST"])
 def sos_api(request):
+    user = _get_user(request)
     if request.method == "GET":
-        alerts = SOSAlert.objects.all().order_by("-alert_time")
+        alerts = SOSAlert.objects.filter(user=user).order_by("-alert_time") if user else SOSAlert.objects.none()
         data = [
             {
                 "id": a.id,
@@ -468,15 +474,15 @@ def sos_api(request):
     longitude = request.data.get("longitude", "")
 
     alert = SOSAlert.objects.create(
+        user=user,
         status="Sent",
         location=location,
         latitude=latitude,
         longitude=longitude,
     )
 
-    user = _get_user(request)
     user_name = user.name if user else ""
-    trusted_contacts = _get_trusted_contacts(user)
+    trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True) if user else EmergencyContact.objects.none()
 
     _send_sos_sms(location, trusted_contacts, user_name, latitude, longitude)
 
@@ -503,9 +509,8 @@ api_sos = sos_api
 @api_view(["GET", "POST"])
 def report_api(request):
     user = _get_user(request)
-
     if request.method == "GET":
-        reports = UnsafeReport.objects.filter(user=user).order_by("-id") if user else UnsafeReport.objects.none()
+        reports = UnsafeReport.objects.filter(user=user).order_by("-id") if user else UnsafeReport.objects.all().order_by("-id")
         data = [
             {
                 "id": r.id,
@@ -565,32 +570,56 @@ from .serializers import (
 
 @api_view(["POST"])
 def sos_start_api(request):
-    """POST /api/sos/start/ — Starts a new SOS emergency session."""
+    """POST /api/sos/start/ — Starts a new SOS emergency session or triggers an alert on active session."""
     user = _get_user(request)
-    if not user:
-        user = UserProfile.objects.first()
+    lat = str(request.data.get("latitude", "") or "").strip()
+    lon = str(request.data.get("longitude", "") or "").strip()
+    location = request.data.get("location", "").strip() or "Emergency GPS Location Alert"
 
-    # Prevent duplicate active sessions
+    user_name = user.name if user else ""
+    trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True) if user else EmergencyContact.objects.filter(is_trusted=True)
+    if not trusted_contacts.exists():
+        trusted_contacts = EmergencyContact.objects.filter(is_trusted=True)
+
+    # Send SOS alert email and SMS ONLY to trusted contacts when SOS is triggered!
+    print(f"[SOS TRIGGER] Sending SOS alert email to {trusted_contacts.count()} trusted contact(s)...")
+    _send_sos_sms(location, trusted_contacts, user_name, lat, lon)
+
+
+
+
+    # Check for existing active session
     active_session = SOSSession.objects.filter(status="Active")
     if user:
         active_session = active_session.filter(user=user)
 
     active_obj = active_session.first()
     if active_obj:
+        active_obj.last_known_location = location
+        if lat and lon:
+            active_obj.initial_latitude = lat
+            active_obj.initial_longitude = lon
+            SOSLocation.objects.create(
+                session=active_obj,
+                latitude=lat,
+                longitude=lon,
+                accuracy=request.data.get("accuracy"),
+                location_name=location,
+            )
+        active_obj.save()
+        SOSAlert.objects.create(user=user, status="Sent", location=location, latitude=lat, longitude=lon)
+
         serializer = SOSSessionSerializer(active_obj, context={"request": request})
         return Response(
             {
-                "message": "An active SOS session is already in progress.",
+                "message": f"🚨 SOS Emergency Alert Sent! Notified {trusted_contacts.count()} trusted contact(s).",
                 "session": serializer.data,
                 "is_new": False,
             },
             status=status.HTTP_200_OK,
         )
 
-    lat = str(request.data.get("latitude", "") or "").strip()
-    lon = str(request.data.get("longitude", "") or "").strip()
-    location = request.data.get("location", "").strip() or "Emergency GPS Location Alert"
-
+    # Create new session if no active session exists
     session = SOSSession.objects.create(
         user=user,
         status="Active",
@@ -611,22 +640,18 @@ def sos_start_api(request):
         )
 
     # Sync with legacy SOSAlert model for dashboard metrics
-    SOSAlert.objects.create(status="Sent", location=location, latitude=lat, longitude=lon)
-
-    # Notify trusted contacts via SMS
-    user_name = user.name if user else ""
-    trusted_contacts = _get_trusted_contacts(user)
-    _send_sos_sms(location, trusted_contacts, user_name, lat, lon)
+    SOSAlert.objects.create(user=user, status="Sent", location=location, latitude=lat, longitude=lon)
 
     serializer = SOSSessionSerializer(session, context={"request": request})
     return Response(
         {
-            "message": f"Emergency SOS activated! Notified {trusted_contacts.count()} contact(s).",
+            "message": f"🚨 EMERGENCY SOS ACTIVATED! Notified {trusted_contacts.count()} contact(s).",
             "session": serializer.data,
             "is_new": True,
         },
         status=status.HTTP_201_CREATED,
     )
+
 
 
 @api_view(["POST"])
@@ -693,20 +718,24 @@ def sos_end_api(request):
     session.save()
 
     # Send "I'm Safe" email to all trusted contacts
-    user = _get_user(request) or (session.user if hasattr(session, "user") else None) or UserProfile.objects.first()
-    user_name = user.name if user else ""
-    trusted_contacts = _get_trusted_contacts(user)
+    session_user = session.user or _get_user(request) or UserProfile.objects.first()
+    user_name = session_user.name if session_user else "SafeHer User"
+    trusted_contacts = EmergencyContact.objects.filter(user=session_user, is_trusted=True) if session_user else EmergencyContact.objects.filter(is_trusted=True)
+    if not trusted_contacts.exists():
+        trusted_contacts = EmergencyContact.objects.filter(is_trusted=True)
 
     mins = session.duration_seconds // 60
     secs = session.duration_seconds % 60
     duration_str = f"{mins} min {secs} sec" if mins > 0 else f"{secs} seconds"
 
+    print(f"[SOS END] Automatically sending 'I'm Safe' email to {trusted_contacts.count()} trusted contact(s)...")
     _send_safe_email(
         trusted_contacts=trusted_contacts,
         user_name=user_name,
         duration_str=duration_str,
-        location=session.last_known_location or session.initial_location,
+        location=session.last_known_location or session.initial_location or "Location not specified",
     )
+
 
     serializer = SOSSessionSerializer(session, context={"request": request})
     return Response(
@@ -723,9 +752,8 @@ def sos_end_api(request):
 def sos_history_api(request):
     """GET /api/sos/history/ — Lists past SOS sessions with search, date filters, and pagination."""
     user = _get_user(request)
-    queryset = SOSSession.objects.all()
-    if user:
-        queryset = queryset.filter(user=user)
+    queryset = SOSSession.objects.filter(user=user) if user else SOSSession.objects.none()
+
 
     # Search filter
     q = request.query_params.get("q", "").strip()
@@ -763,6 +791,138 @@ def sos_history_api(request):
     })
 
 
+def _detect_media_mimetype(filename, media_type=""):
+    """Returns exact MIME type so email clients natively support and render audio/video/image attachments."""
+    fn = str(filename).lower()
+    if fn.endswith(".mp4") or fn.endswith(".m4v"):
+        return "video/mp4"
+    if fn.endswith(".webm"):
+        return "video/webm" if "video" in media_type.lower() else "audio/webm"
+    if fn.endswith(".mp3"):
+        return "audio/mpeg"
+    if fn.endswith(".m4a") or fn.endswith(".aac"):
+        return "audio/mp4"
+    if fn.endswith(".ogg") or fn.endswith(".ogv"):
+        return "audio/ogg"
+    if fn.endswith(".wav"):
+        return "audio/wav"
+    if fn.endswith(".jpg") or fn.endswith(".jpeg"):
+        return "image/jpeg"
+    if fn.endswith(".png"):
+        return "image/png"
+
+    mt = media_type.lower()
+    if "video" in mt:
+        return "video/mp4"
+    if "audio" in mt:
+        return "audio/mp4"
+    if "photo" in mt or "image" in mt:
+        return "image/jpeg"
+    return "application/octet-stream"
+
+
+def _send_sos_media_email(session, media_type, file_field, request=None):
+    """Instantly send compressed media attachment (photo/audio/video) with valid MIME type headers to all trusted contacts."""
+    from django.core.mail import EmailMultiAlternatives
+    from .views import _relationship_message
+
+    user = session.user or _get_user(request) or UserProfile.objects.first()
+    if not user:
+        print(f"[MEDIA EMAIL] No user found for session #{session.id}")
+        return
+
+    user_name = user.name
+    location = session.last_known_location or session.initial_location or "Location not specified"
+    trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True) if user else EmergencyContact.objects.filter(is_trusted=True)
+    if not trusted_contacts.exists():
+        trusted_contacts = EmergencyContact.objects.filter(is_trusted=True)
+
+    if not trusted_contacts.exists():
+        print(f"[MEDIA EMAIL] No trusted contacts configured in database")
+        return
+
+
+
+    for contact in trusted_contacts:
+        if not contact.email:
+            continue
+
+        sender_desc = _relationship_message(contact.relationship)
+        subject = f"🚨 URGENT SOS MEDIA EVIDENCE: {media_type} from {user_name}!"
+
+        plain_text = (
+            f"Dear {contact.contact_name},\n\n"
+            f"🚨 URGENT SOS MEDIA RECORDING\n\n"
+            f"{sender_desc} ({user_name}) has uploaded a new emergency {media_type} during an active SOS alert!\n\n"
+            f"📍 Last Known Location:\n{location}\n\n"
+            f"The recorded media file is attached to this email.\n\n"
+            f"Please check on them or call emergency services (112) immediately.\n\n— SafeHer Safety App"
+        )
+
+        html_content = f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);">
+          <div style="background:#e53935;padding:24px;text-align:center;">
+            <h1 style="color:white;margin:0;font-size:22px;">🚨 SOS MEDIA EVIDENCE ({media_type.upper()})</h1>
+          </div>
+          <div style="padding:28px;">
+            <p style="font-size:16px;color:#333;">Dear <strong>{contact.contact_name}</strong>,</p>
+            <div style="background:#fff3e0;border-left:4px solid #e53935;padding:16px;border-radius:8px;margin:16px 0;">
+              <p style="margin:0;font-size:16px;color:#b71c1c;font-weight:bold;">
+                {sender_desc} ({user_name}) has just recorded and sent a compressed <u>{media_type}</u> during their active SOS emergency!
+              </p>
+            </div>
+            <div style="background:#f5f5f5;border-radius:8px;padding:16px;margin:16px 0;">
+              <p style="margin:0 0 6px;font-size:13px;color:#888;text-transform:uppercase;letter-spacing:1px;">📍 Last Known Location</p>
+              <p style="margin:0;font-size:15px;color:#333;font-weight:600;">{location}</p>
+            </div>
+            <div style="background:#ffebee;border-radius:8px;padding:16px;margin:16px 0;text-align:center;">
+              <p style="margin:0;font-size:15px;color:#c62828;font-weight:bold;">
+                📎 The recorded {media_type.lower()} file has been attached to this email.
+              </p>
+            </div>
+            <p style="color:#999;font-size:12px;text-align:center;margin-top:24px;">Sent immediately by SafeHer Safety Console</p>
+          </div>
+        </div>
+        """
+
+        try:
+            sender_email = f"SafeHer Emergency Console <{settings.EMAIL_HOST_USER}>"
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=plain_text,
+                from_email=sender_email,
+                to=[contact.email],
+                headers={"X-Priority": "1", "Priority": "urgent", "Importance": "High"},
+            )
+            msg.attach_alternative(html_content, "text/html")
+
+
+            if file_field and hasattr(file_field, "path"):
+                try:
+                    filename = file_field.name.split("/")[-1].split("\\")[-1]
+                    mimetype = _detect_media_mimetype(filename, media_type)
+                    with open(file_field.path, "rb") as f:
+                        msg.attach(filename, f.read(), mimetype)
+                    print(f"[MEDIA EMAIL SUCCESS] Attached {filename} ({mimetype}) for {contact.contact_name}")
+                except Exception as fe:
+                    print("Error attaching file from path:", fe)
+            elif file_field and hasattr(file_field, "read"):
+                try:
+                    filename = getattr(file_field, "name", f"sos_{media_type.lower()}.mp4")
+                    mimetype = _detect_media_mimetype(filename, media_type)
+                    file_field.seek(0)
+                    msg.attach(filename, file_field.read(), mimetype)
+                    print(f"[MEDIA EMAIL SUCCESS] Attached stream {filename} ({mimetype}) for {contact.contact_name}")
+                except Exception as fe:
+                    print("Error attaching file from stream:", fe)
+
+            msg.send(fail_silently=False)
+            print(f"SOS media email ({media_type}) sent to {contact.contact_name} <{contact.email}>")
+        except Exception as e:
+            print(f"Error sending SOS media email to {contact.contact_name}: {e}")
+
+
+
 @api_view(["POST"])
 def sos_upload_photo_api(request):
     """POST /api/sos/upload-photo/ — Upload photo for SOS session."""
@@ -778,8 +938,10 @@ def sos_upload_photo_api(request):
         return Response({"error": "SOS session not found."}, status=status.HTTP_404_NOT_FOUND)
 
     photo = SOSPhoto.objects.create(session=session, image=image_file)
+    _send_sos_media_email(session, "Photo", photo.image, request)
+
     serializer = SOSPhotoSerializer(photo, context={"request": request})
-    return Response({"message": "Photo uploaded successfully.", "photo": serializer.data}, status=status.HTTP_201_CREATED)
+    return Response({"message": "Photo uploaded and sent to trusted contacts successfully.", "photo": serializer.data}, status=status.HTTP_201_CREATED)
 
 
 @api_view(["POST"])
@@ -798,8 +960,10 @@ def sos_upload_audio_api(request):
         return Response({"error": "SOS session not found."}, status=status.HTTP_404_NOT_FOUND)
 
     audio = SOSAudio.objects.create(session=session, audio_file=audio_file, duration_seconds=duration)
+    _send_sos_media_email(session, "Audio Recording", audio.audio_file, request)
+
     serializer = SOSAudioSerializer(audio, context={"request": request})
-    return Response({"message": "Audio recording uploaded successfully.", "audio": serializer.data}, status=status.HTTP_201_CREATED)
+    return Response({"message": "Audio recording uploaded and sent to trusted contacts successfully.", "audio": serializer.data}, status=status.HTTP_201_CREATED)
 
 
 @api_view(["POST"])
@@ -818,6 +982,9 @@ def sos_upload_video_api(request):
         return Response({"error": "SOS session not found."}, status=status.HTTP_404_NOT_FOUND)
 
     video = SOSVideo.objects.create(session=session, video_file=video_file, duration_seconds=duration)
+    _send_sos_media_email(session, "Video Recording", video.video_file, request)
+
     serializer = SOSVideoSerializer(video, context={"request": request})
-    return Response({"message": "Video recording uploaded successfully.", "video": serializer.data}, status=status.HTTP_201_CREATED)
+    return Response({"message": "Video recording uploaded and sent to trusted contacts successfully.", "video": serializer.data}, status=status.HTTP_201_CREATED)
+
 

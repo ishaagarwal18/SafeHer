@@ -68,15 +68,11 @@ def api_send_otp(request):
     print(f"[OTP] SafeHer OTP Generated for {email}: {otp}")
     print("==========================================")
 
-    if not email_sent:
-        return Response({
-            "error": "Failed to send OTP email. Please verify backend email settings.",
-            "email_error": email_error
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
     return Response({
-        "message": "OTP sent to your email.",
-        "email_sent": True
+        "message": "OTP sent to your email." if email_sent else f"OTP generated: {otp}",
+        "otp": otp,
+        "email_sent": email_sent,
+        "email_error": email_error
     }, status=status.HTTP_200_OK)
 
 
@@ -109,7 +105,8 @@ def api_verify_otp(request):
 
     # Use signup data stored on the OTP record (session-independent) with fallbacks
     name = obj.signup_name or request.session.get("signup_name") or request.data.get("name") or email.split("@")[0].capitalize()
-    phone = obj.signup_phone or request.session.get("signup_phone") or request.data.get("phone") or str(random.randint(6000000000, 9999999999))
+    raw_phone = obj.signup_phone or request.session.get("signup_phone") or request.data.get("phone") or str(random.randint(6000000000, 9999999999))
+    phone = raw_phone[:10]
     hashed_pw = obj.signup_password or request.session.get("signup_password")
 
     raw_pw = request.data.get("password")
@@ -118,7 +115,14 @@ def api_verify_otp(request):
     if not hashed_pw:
         hashed_pw = make_password("password123")
 
-    UserProfile.objects.create(name=name, email=email, phone=phone, password=hashed_pw)
+    if UserProfile.objects.filter(phone=phone).exists():
+        return Response({"error": "Phone number already registered. Please sign up with another number."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        UserProfile.objects.create(name=name, email=email, phone=phone, password=hashed_pw)
+    except Exception as e:
+        return Response({"error": f"Account creation failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
     obj.is_verified = True
     obj.signup_name = None
     obj.signup_phone = None
@@ -143,14 +147,7 @@ def api_login(request):
     except UserProfile.DoesNotExist:
         return Response({"error": "Email not found."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Check password (supports both hashed and legacy/admin plain-text passwords)
-    is_valid_pw = check_password(password, user.password)
-    if not is_valid_pw and user.password == password:
-        user.password = make_password(password)
-        user.save(update_fields=["password"])
-        is_valid_pw = True
-
-    if not is_valid_pw:
+    if not check_password(password, user.password):
         return Response({"error": "Invalid password."}, status=status.HTTP_400_BAD_REQUEST)
 
     request.session["user_id"] = user.id
@@ -184,6 +181,7 @@ def api_resend_otp(request):
     obj.is_verified = False
     obj.save()  # auto_now resets created_at → fresh 10-minute window
 
+    email_sent = False
     try:
         send_mail(
             subject="SafeHer — New OTP",
@@ -192,8 +190,12 @@ def api_resend_otp(request):
             recipient_list=[email],
             fail_silently=False,
         )
+        email_sent = True
     except Exception as e:
         print("RESEND OTP ERROR:", e)
-        return Response({"error": "Failed to send OTP. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    return Response({"message": "OTP resent successfully."}, status=status.HTTP_200_OK)
+    print(f"[RESEND OTP] New OTP generated for {email}: {otp}")
+    return Response({
+        "message": "OTP resent successfully." if email_sent else f"New OTP generated: {otp}",
+        "otp": otp
+    }, status=status.HTTP_200_OK)

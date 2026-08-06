@@ -6,6 +6,7 @@ __pycache__/
 # Django
 db.sqlite3
 *.sqlite3
+Backend/media/
 
 # Virtual environments
 venv/
@@ -19,8 +20,6 @@ Frontend/node_modules/
 
 # Build
 Frontend/dist/
-staticfiles/
-Backend/staticfiles/
 
 # OS files
 .DS_Store

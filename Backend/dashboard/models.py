@@ -3,7 +3,7 @@ from authentication.models import UserProfile
 
 
 class SOSAlert(models.Model):
-    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, null=True, blank=True, related_name="sos_alerts")
+    user = models.ForeignKey(UserProfile, on_delete=models.SET_NULL, null=True, blank=True, related_name="sos_alerts")
     alert_time = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=50)
     latitude = models.CharField(max_length=50, blank=True, null=True)
@@ -11,7 +11,9 @@ class SOSAlert(models.Model):
     location = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"SOS Alert at {self.alert_time} ({self.status})"
+        user_str = f" ({self.user.name})" if self.user else ""
+        return f"SOS Alert at {self.alert_time}{user_str} ({self.status})"
+
 
 
 class SOSSession(models.Model):

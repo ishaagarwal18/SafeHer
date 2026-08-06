@@ -8,25 +8,15 @@ def _send_email(subject, plain_text, html_content, recipients):
     recipients = [email for email in recipients if email]
     if not recipients:
         return 0
-    from_email = getattr(settings, "EMAIL_HOST_USER", None) or getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@safeher.com")
-    if not from_email or "your-email" in from_email:
-        from_email = "noreply@safeher.com"
     message = EmailMultiAlternatives(
         subject=subject,
         body=plain_text,
-        from_email=from_email,
+        from_email=getattr(settings, "EMAIL_HOST_USER", getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@safeher.com")),
         to=recipients,
     )
     message.attach_alternative(html_content, "text/html")
-    safe_subj = subject.encode('ascii', 'replace').decode('ascii')
-    try:
-        message.send(fail_silently=False)
-        print(f"[EMAIL SENT] Subject: '{safe_subj}' to {recipients}")
-        return len(recipients)
-    except Exception as e:
-        safe_err = str(e).encode('ascii', 'replace').decode('ascii')
-        print(f"[EMAIL ERROR] Subject: '{safe_subj}' to {recipients}: {safe_err}")
-        return 0
+    message.send(fail_silently=True)
+    return len(recipients)
 
 
 def send_safety_check_email(journey):
@@ -41,27 +31,27 @@ def send_safety_check_email(journey):
     safe_action_url = f"{app_url}/journey?checkin={journey.id}&status=safe"
     not_safe_action_url = f"{app_url}/journey?checkin={journey.id}&status=not_safe"
 
-    subject = f"[SafeHer Safety Check] Are you safe?"
+    subject = f"🛡️ SafeHer Safety Check: Are you safe?"
 
     plain = (
         f"Hi {user_name},\n\n"
-        f"Periodic safety check for your active journey: {journey.source} -> {journey.destination}.\n\n"
+        f"Periodic safety check for your active journey: {journey.source} → {journey.destination}.\n\n"
         f"Are you safe?\n\n"
         f"YES, I am safe: {safe_action_url}\n"
         f"NO, I am NOT safe: {not_safe_action_url}\n\n"
-        f"- SafeHer Safety App"
+        f"— SafeHer Safety App"
     )
 
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);border:1px solid #f4dce5;">
       <div style="background:#ff4f81;color:#fff;padding:22px;text-align:center;">
-        <h1 style="margin:0;font-size:24px;">SafeHer Safety Check</h1>
+        <h1 style="margin:0;font-size:24px;">🛡️ SafeHer Safety Check</h1>
       </div>
       <div style="padding:26px;text-align:center;">
         <p style="font-size:16px;color:#333;margin:0 0 12px;">Hi <strong>{user_name}</strong>,</p>
         <p style="font-size:15px;color:#526074;margin:0 0 20px;">
           Periodic safety check for your active journey:<br/>
-          <strong style="color:#1e293b;font-size:16px;">{journey.source} -> {journey.destination}</strong>
+          <strong style="color:#1e293b;font-size:16px;">{journey.source} → {journey.destination}</strong>
         </p>
 
         <div style="background:#fff5f8;border-radius:12px;padding:20px;margin:20px 0;border:1px solid #ffe0ea;">
@@ -71,14 +61,14 @@ def send_safety_check_email(journey):
             <a href="{safe_action_url}" target="_blank"
                style="display:inline-block;background:#10b981;color:white;padding:12px 24px;
                       border-radius:8px;text-decoration:none;font-size:15px;font-weight:bold;">
-              I'm Safe
+              ✅ I'm Safe
             </a>
           </div>
           <div style="display:inline-block;margin:6px;">
             <a href="{not_safe_action_url}" target="_blank"
                style="display:inline-block;background:#dc2626;color:white;padding:12px 24px;
                       border-radius:8px;text-decoration:none;font-size:15px;font-weight:bold;">
-              Not Safe
+              🚨 Not Safe
             </a>
           </div>
         </div>
@@ -103,21 +93,21 @@ def send_not_safe_alert_email(journey, location=""):
     app_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
     traveller = journey.user.name if (journey.user and journey.user.name) else "SafeHer User"
     maps_link = f"https://www.google.com/maps/dir/?api=1&origin={journey.source}&destination={journey.destination}"
-    subject = f"[URGENT SAFETY ALERT] {traveller} reported NOT SAFE during journey!"
+    subject = f"🚨 URGENT SAFETY ALERT: {traveller} reported NOT SAFE during journey!"
 
     plain = (
-        f"URGENT EMERGENCY ALERT\n\n"
+        f"🚨 URGENT EMERGENCY ALERT\n\n"
         f"{traveller} has explicitly clicked 'NOT SAFE' during their journey from {journey.source} to {journey.destination}!\n\n"
-        f"Location / Route: {journey.source} -> {journey.destination}\n"
-        f"Google Maps Link: {maps_link}\n\n"
+        f"📍 Location / Route: {journey.source} → {journey.destination}\n"
+        f"🗺 Google Maps Link: {maps_link}\n\n"
         "Please try to contact them immediately or call emergency services (112).\n\n"
-        f"- SafeHer Safety App\n{app_url}"
+        f"— SafeHer Safety App\n{app_url}"
     )
 
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
       <div style="background:#dc2626;padding:24px;text-align:center;">
-        <h1 style="color:white;margin:0;font-size:26px;">URGENT: USER REPORTED NOT SAFE</h1>
+        <h1 style="color:white;margin:0;font-size:26px;">🚨 URGENT: USER REPORTED NOT SAFE</h1>
       </div>
       <div style="padding:28px;">
         <p style="font-size:16px;color:#333;">Dear Trusted Contact,</p>
@@ -127,15 +117,15 @@ def send_not_safe_alert_email(journey, location=""):
           </p>
         </div>
         <div style="background:#f8fafc;border-radius:8px;padding:16px;margin:16px 0;">
-          <p style="margin:0 0 6px;font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Active Route</p>
-          <p style="margin:0;font-size:15px;color:#1e293b;font-weight:bold;">{journey.source} -> {journey.destination}</p>
+          <p style="margin:0 0 6px;font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:1px;">🗺 Active Route</p>
+          <p style="margin:0;font-size:15px;color:#1e293b;font-weight:bold;">{journey.source} → {journey.destination}</p>
           <p style="margin:4px 0 0;font-size:13px;color:#64748b;">Transport Mode: {journey.transport_mode or 'Car'}</p>
         </div>
         <div style="margin:20px 0;text-align:center;">
           <a href="{maps_link}" target="_blank"
              style="display:inline-block;background:#dc2626;color:white;padding:14px 28px;
                     border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;">
-            View Route on Google Maps
+            🗺 View Route on Google Maps
           </a>
         </div>
         <div style="background:#fee2e2;border-radius:8px;padding:16px;margin:16px 0;text-align:center;">
@@ -161,7 +151,7 @@ def send_trusted_contact_escalation(journey):
 
     app_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
     traveller = journey.user.name if (journey.user and journey.user.name) else "SafeHer User"
-    subject = f"[UNANSWERED SAFETY ALERT] {traveller} ignored 2 safety check-ins!"
+    subject = f"⚠️ UNANSWERED SAFETY ALERT: {traveller} ignored 2 safety check-ins!"
     plain = (
         f"⚠️ AUTOMATED SAFETY ESCALATION ALERT\n\n"
         f"{traveller} has ignored 2 consecutive safety check-in prompts during their journey from {journey.source} to {journey.destination}.\n\n"
