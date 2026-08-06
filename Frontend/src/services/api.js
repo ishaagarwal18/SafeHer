@@ -6,10 +6,8 @@ function getCookie(name) {
     return match ? decodeURIComponent(match[2]) : null;
 }
 
-const BASE_URL = import.meta.env.VITE_API_URL || "";
-
 const api = axios.create({
-    baseURL: `${BASE_URL}/api/`,
+    baseURL: "/api/",
     withCredentials: true,
 });
 
@@ -24,7 +22,7 @@ api.interceptors.request.use((config) => {
 
 // Separate instance for endpoints under /dashboard/
 export const dashboardApi = axios.create({
-    baseURL: `${BASE_URL}/dashboard/`,
+    baseURL: "/dashboard/",
     withCredentials: true,
 });
 
