@@ -18,14 +18,23 @@ from journey.services import send_safety_check_email, send_trusted_contact_escal
 
 
 def _get_user(request):
-    """Return the logged-in UserProfile from session, or None."""
+    """Return the logged-in UserProfile from session, or request data, or None."""
     user_id = request.session.get("user_id")
-    if not user_id:
-        return None
-    try:
-        return UserProfile.objects.get(id=user_id)
-    except UserProfile.DoesNotExist:
-        return None
+    if not user_id and hasattr(request, "data"):
+        user_id = request.data.get("user_id")
+        if not user_id:
+            email = request.data.get("user_email") or request.data.get("email")
+            if email:
+                try:
+                    return UserProfile.objects.get(email=email)
+                except UserProfile.DoesNotExist:
+                    pass
+    if user_id:
+        try:
+            return UserProfile.objects.get(id=user_id)
+        except UserProfile.DoesNotExist:
+            pass
+    return None
 
 
 @api_view(["GET"])
@@ -684,12 +693,9 @@ def sos_end_api(request):
     session.save()
 
     # Send "I'm Safe" email to all trusted contacts
-    user = _get_user(request) or session.user or UserProfile.objects.first()
+    user = _get_user(request) or (session.user if hasattr(session, "user") else None) or UserProfile.objects.first()
     user_name = user.name if user else ""
-    if user:
-        trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True)
-    else:
-        trusted_contacts = EmergencyContact.objects.filter(is_trusted=True)
+    trusted_contacts = _get_trusted_contacts(user)
 
     mins = session.duration_seconds // 60
     secs = session.duration_seconds % 60

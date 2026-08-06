@@ -208,9 +208,9 @@ def _send_sos_sms(location, trusted_contacts, user_name="", latitude="", longitu
             )
             msg.attach_alternative(html_content, "text/html")
             msg.send(fail_silently=False)
-            print(f"✅ SOS email sent to {contact.contact_name} <{email_addr}>")
+            print(f"[SOS EMAIL SENT] to {contact.contact_name} <{email_addr}>")
         except Exception as e:
-            print(f"❌ SOS email error for {contact.contact_name} <{email_addr}>: {e}")
+            print(f"[SOS EMAIL ERROR] for {contact.contact_name} <{email_addr}>: {e}")
 
     # Also send SMS to ALL trusted contacts (including those without email)
     _send_twilio_sms(trusted_contacts, user_name, location, latitude, longitude)
@@ -220,8 +220,11 @@ def _send_safe_email(trusted_contacts, user_name="", duration_str="", location="
     """Send an HTML email notification to trusted contacts when the user marks themselves as safe."""
     from django.core.mail import EmailMultiAlternatives
 
+    from_email = settings.EMAIL_HOST_USER if (settings.EMAIL_HOST_USER and "your-email" not in settings.EMAIL_HOST_USER) else "noreply@safeher.com"
+
     for contact in trusted_contacts:
-        if not contact.email:
+        email_addr = (contact.email or "").strip()
+        if not email_addr:
             print(f"No email for trusted contact {contact.contact_name} — skipped safe notification")
             continue
 
@@ -270,14 +273,14 @@ def _send_safe_email(trusted_contacts, user_name="", duration_str="", location="
             msg = EmailMultiAlternatives(
                 subject=subject,
                 body=plain_text,
-                from_email=settings.EMAIL_HOST_USER,
-                to=[contact.email],
+                from_email=from_email,
+                to=[email_addr],
             )
             msg.attach_alternative(html_content, "text/html")
-            msg.send(fail_silently=True)
-            print(f"Safe email sent to {contact.contact_name} <{contact.email}>")
+            msg.send(fail_silently=False)
+            print(f"[SAFE EMAIL SENT] to {contact.contact_name} <{email_addr}>")
         except Exception as e:
-            print(f"Safe email error for {contact.contact_name}: {e}")
+            print(f"[SAFE EMAIL ERROR] for {contact.contact_name}: {e}")
 
     # Also send "safe" SMS to all trusted contacts
     _send_safe_sms(trusted_contacts, user_name, location)
