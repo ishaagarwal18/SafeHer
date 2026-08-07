@@ -114,6 +114,7 @@ def contacts_api(request):
         phone_number=phone,
         email=email or None,
         relationship=relationship,
+        is_trusted=True,
     )
     return Response({
         "id": contact.id,
@@ -482,7 +483,12 @@ def sos_api(request):
     )
 
     user_name = user.name if user else ""
-    trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True) if user else EmergencyContact.objects.none()
+    if user:
+        trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True)
+        if not trusted_contacts.exists():
+            trusted_contacts = EmergencyContact.objects.filter(user=user)
+    else:
+        trusted_contacts = EmergencyContact.objects.filter(is_trusted=True)
 
     _send_sos_sms(location, trusted_contacts, user_name, latitude, longitude)
 
@@ -577,9 +583,14 @@ def sos_start_api(request):
     location = request.data.get("location", "").strip() or "Emergency GPS Location Alert"
 
     user_name = user.name if user else ""
-    trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True) if user else EmergencyContact.objects.filter(is_trusted=True)
-    if not trusted_contacts.exists():
+    if user:
+        trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True)
+        if not trusted_contacts.exists():
+            trusted_contacts = EmergencyContact.objects.filter(user=user)
+    else:
         trusted_contacts = EmergencyContact.objects.filter(is_trusted=True)
+        if not trusted_contacts.exists():
+            trusted_contacts = EmergencyContact.objects.all()
 
     # Send SOS alert email and SMS ONLY to trusted contacts when SOS is triggered!
     print(f"[SOS TRIGGER] Sending SOS alert email to {trusted_contacts.count()} trusted contact(s)...")
@@ -833,15 +844,18 @@ def _send_sos_media_email(session, media_type, file_field, request=None):
 
     user_name = user.name
     location = session.last_known_location or session.initial_location or "Location not specified"
-    trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True) if user else EmergencyContact.objects.filter(is_trusted=True)
-    if not trusted_contacts.exists():
+    if user:
+        trusted_contacts = EmergencyContact.objects.filter(user=user, is_trusted=True)
+        if not trusted_contacts.exists():
+            trusted_contacts = EmergencyContact.objects.filter(user=user)
+    else:
         trusted_contacts = EmergencyContact.objects.filter(is_trusted=True)
+        if not trusted_contacts.exists():
+            trusted_contacts = EmergencyContact.objects.all()
 
     if not trusted_contacts.exists():
         print(f"[MEDIA EMAIL] No trusted contacts configured in database")
         return
-
-
 
     for contact in trusted_contacts:
         if not contact.email:
@@ -886,7 +900,8 @@ def _send_sos_media_email(session, media_type, file_field, request=None):
         """
 
         try:
-            sender_email = f"SafeHer Emergency Console <{settings.EMAIL_HOST_USER}>"
+            from_addr = getattr(settings, "EMAIL_HOST_USER", None) or getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@safeher.com")
+            sender_email = f"SafeHer Emergency Console <{from_addr}>"
             msg = EmailMultiAlternatives(
                 subject=subject,
                 body=plain_text,

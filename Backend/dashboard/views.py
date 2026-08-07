@@ -113,6 +113,9 @@ def _send_twilio_sms(trusted_contacts, user_name="", location="", latitude="", l
             print(f"Unexpected SMS error for {contact.contact_name}: {e}")
 
 
+_send_sms_via_twilio = _send_twilio_sms
+
+
 def _send_sos_sms(location, trusted_contacts, user_name="", latitude="", longitude=""):
     """Send SOS alert HTML email to all trusted contacts that have an email address."""
     from django.core.mail import EmailMultiAlternatives
@@ -199,7 +202,8 @@ def _send_sos_sms(location, trusted_contacts, user_name="", latitude="", longitu
         """
 
         try:
-            sender_email = f"SafeHer Emergency Console <{settings.EMAIL_HOST_USER}>"
+            from_addr = getattr(settings, "EMAIL_HOST_USER", None) or getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@safeher.com")
+            sender_email = f"SafeHer Emergency Console <{from_addr}>"
             msg = EmailMultiAlternatives(
                 subject=subject,
                 body=plain_text,
@@ -213,10 +217,13 @@ def _send_sos_sms(location, trusted_contacts, user_name="", latitude="", longitu
         except Exception as e:
             print(f"SOS email error for {contact.contact_name}: {e}")
 
-
-
     # Also send SMS to ALL trusted contacts (including those without email)
-    _send_twilio_sms(trusted_contacts, user_name, location, latitude, longitude)
+    _send_sms_via_twilio(trusted_contacts, user_name, location, latitude, longitude)
+
+
+_send_sos_email = _send_sos_sms
+_send_sms_via_twilio = _send_twilio_sms
+
 
 
 def _send_safe_email(trusted_contacts, user_name="", duration_str="", location=""):

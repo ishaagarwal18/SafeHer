@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import "../styles/home.css";
@@ -59,49 +58,17 @@ const steps = [
 export default function Home() {
     const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
-    const [modal, setModal] = useState(null); // { title, route } | null
 
     const handleFeatureClick = (feature) => {
         if (isAuthenticated) {
             navigate(feature.route);
         } else {
-            setModal({ title: feature.title, route: feature.route });
+            navigate("/login", { state: { from: { pathname: feature.route }, required: true } });
         }
     };
 
     return (
         <div className="home-root">
-
-            {/* ── LOGIN REQUIRED MODAL ── */}
-            {modal && (
-                <div className="hn-modal-backdrop" onClick={() => setModal(null)}>
-                    <div className="hn-modal" onClick={(e) => e.stopPropagation()}>
-                        <button className="hn-modal-close" onClick={() => setModal(null)} aria-label="Close">✕</button>
-                        <div className="hn-modal-icon">🔒</div>
-                        <h3 className="hn-modal-title">Login Required</h3>
-                        <p className="hn-modal-desc">
-                            You need to be logged in to access <strong>{modal.title}</strong>.
-                        </p>
-                        <div className="hn-modal-actions">
-                            <Link
-                                to="/login"
-                                state={{ from: { pathname: modal.route } }}
-                                className="hn-modal-btn-primary"
-                                onClick={() => setModal(null)}
-                            >
-                                Login
-                            </Link>
-                            <Link
-                                to="/signup"
-                                className="hn-modal-btn-ghost"
-                                onClick={() => setModal(null)}
-                            >
-                                Create Account
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* ── NAVBAR ── */}
             <nav className="hn-nav">

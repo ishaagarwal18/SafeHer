@@ -188,3 +188,6 @@ SAFETY_CHECK_INTERVAL_MINUTES = int(os.environ.get("SAFETY_CHECK_INTERVAL_MINUTE
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+

@@ -179,7 +179,7 @@ function SOS() {
       });
 
       setActiveSession(res.data.session);
-      showToast(res.data.message || "🚨 EMERGENCY SOS ACTIVATED!", "error");
+      showToast(res.data.message || "🚨 EMERGENCY SOS ACTIVATED! Email sent to trusted contact(s).", "error");
     } catch (_) {
       showToast("❌ Failed to send SOS alert. Please check your network.", "error");
     } finally {
@@ -374,7 +374,7 @@ function SOS() {
           await dashboardApi.post("api/sos/upload-video/", formData, {
             headers: { "Content-Type": "multipart/form-data" },
           });
-          showToast("📹 Compressed video recording sent to trusted contacts!", "success");
+          showToast("🎥 Emergency video recording emailed to trusted contact(s)!", "success");
         } catch (_) {
           showToast("Failed to upload video.", "error");
         } finally {
