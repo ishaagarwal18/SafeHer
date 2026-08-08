@@ -156,6 +156,18 @@ function SOS() {
     };
   }, [activeSession]);
 
+  // Handle attaching photo stream to video element when it renders, and cleanup tracks on unmount/stream change
+  useEffect(() => {
+    if (photoStream && videoRef.current) {
+      videoRef.current.srcObject = photoStream;
+    }
+    return () => {
+      if (photoStream) {
+        photoStream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [photoStream]);
+
   const handleSOSClick = () => {
     setShowCountdown(true);
   };
@@ -193,6 +205,10 @@ function SOS() {
 
     if (audioRecording) stopAudioRecording();
     if (videoRecording) stopVideoRecording();
+    if (photoStream) {
+      photoStream.getTracks().forEach((track) => track.stop());
+      setPhotoStream(null);
+    }
 
     try {
       const res = await dashboardApi.post("api/sos/end/", { session_id: activeSession.id });
@@ -207,9 +223,9 @@ function SOS() {
 
   const startCamera = async () => {
     try {
+      setPhotoPreview(null);
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       setPhotoStream(stream);
-      if (videoRef.current) videoRef.current.srcObject = stream;
     } catch (_) {
       showToast("Camera access denied or unavailable.", "error");
     }
@@ -222,6 +238,11 @@ function SOS() {
     canvas.height = videoRef.current.videoHeight || 480;
     const ctx = canvas.getContext("2d");
     ctx.drawImage(videoRef.current, 0, 0);
+
+    if (photoStream) {
+      photoStream.getTracks().forEach((track) => track.stop());
+      setPhotoStream(null);
+    }
 
     canvas.toBlob(async (blob) => {
       if (!blob || !activeSession) return;

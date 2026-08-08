@@ -114,7 +114,7 @@ def contacts_api(request):
         phone_number=phone,
         email=email or None,
         relationship=relationship,
-        is_trusted=True,
+        is_trusted=False,
     )
     return Response({
         "id": contact.id,
